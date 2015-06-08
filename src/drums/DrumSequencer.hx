@@ -120,7 +120,7 @@ class Track {
 	var _pan:Float = 0;
 	var panNode:PannerNode;
 
-	public function new(buffer:AudioBuffer ,context:AudioContext, destination:AudioNode) {
+	public function new(buffer:AudioBuffer,context:AudioContext, destination:AudioNode) {
 
 		//pan
 		panNode = context.createPanner();
@@ -134,19 +134,33 @@ class Track {
 		source.attack = 0;
 		source.buffer = buffer;
 
+		var stepCount = 16;
+
 		// some initial events...
 		events = [];
-		for (i in 0...16) {
+		for (i in 0...stepCount) {
 			var rate = 1.0 + ((1 * i) / 8);
 			events.push({
 				active:i % 4 == 0,
+				volume: 1,
+				pan:-.5 + (i/(stepCount*2)),
 				rate: rate,
 				release: buffer.duration / rate,
-				volume: 1,
-				pan:-.5 + (i/32)
 			});
 		}
 	}
+
+
+	public function setEvent(index:Int, active:Bool, ?volume:Float, ?pan:Float, ?rate:Float, ?release:Float) {
+		var e = events[index];
+		if ((e.active = active)) {
+			e.volume = volume;
+			e.pan = pan;
+			e.rate = rate;
+			e.release = release;
+		}
+	}
+
 
 	inline function get_pan() return _pan;
 	function set_pan(value:Float) {
