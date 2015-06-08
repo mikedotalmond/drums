@@ -1,9 +1,12 @@
 package;
 
+import drums.BeatLines;
 import drums.DrumSequencer;
+import drums.Oscilliscope;
 import js.Browser;
 import js.html.*;
 import js.html.audio.*;
+import pixi.core.display.Container;
 import tones.utils.TimeUtil;
 
 import pixi.core.graphics.*;
@@ -22,15 +25,23 @@ class Main extends Application {
 	var graphics:Graphics;
 
 	var audioContext:AudioContext;
-	var analyser:AnalyserNode;
 	var outGain:GainNode;
 
-	var analyserData:Uint8Array;
+	var drums:DrumSequencer;
+	var oscilliscope:Oscilliscope;
+	var beatLines:BeatLines;
 
 	public function new() {
 		super();
+
 		initAudio();
 		initPixi();
+
+		initBeatLines();
+		initStepGrid();
+		initOscilliscope();
+
+		stageResized();
 	}
 
 
@@ -41,15 +52,12 @@ class Main extends Application {
 		outGain.gain.value = .2;
 		outGain.connect(audioContext.destination);
 
-		analyser = audioContext.createAnalyser();
-		analyser.smoothingTimeConstant = 0.5;
-		analyser.fftSize = 512;
+		drums = new DrumSequencer(audioContext, outGain);
+		drums.tick.connect(onSequenceTick);
+	}
 
-		analyserData = new Uint8Array(analyser.frequencyBinCount);
-
-		// test
-		var drums = new DrumSequencer(audioContext, outGain);
-		drums.outGain.connect(analyser);
+	function onSequenceTick(index:Int) {
+		beatLines.tick(index);
 	}
 
 
@@ -67,39 +75,44 @@ class Main extends Application {
 		txt.position.x = 10;
 		txt.position.y = 10;
 
-		graphics = new Graphics();
-		stage.addChild(graphics);
-		stageResized();
-
 		stage.interactive = true;
 	}
 
 
+	function initOscilliscope() {
+		oscilliscope = new Oscilliscope(audioContext, 640, 320);
+		//stage.addChild(oscilliscope);
+		drums.outGain.connect(oscilliscope.analyser);
+	}
+
+
+	function initBeatLines() {
+		beatLines = new BeatLines(600, 320);
+		stage.addChild(beatLines);
+	}
+
+
+	function initStepGrid() {
+
+	}
+
+
 	function tick(dt:Float) {
-		graphics.clear();
-		drawWaveform();
+		oscilliscope.update(dt);
 	}
 
 
 	function stageResized() {
-		graphics.position.x = 0;
-		graphics.position.y = height / 2 - 128;
-	}
+		var w2 = width / 2;
+		var h2 = height / 2;
+
+		beatLines.position.x = w2 - beatLines.displayWidth / 2;
+		beatLines.position.y = h2 - beatLines.displayHeight / 2;
+
+		oscilliscope.position.x = w2 - oscilliscope.displayWidth / 2;
+		oscilliscope.position.y = h2 - oscilliscope.displayHeight / 2;
 
 
-	function drawWaveform() {
-
-		var data = analyserData;
-		var n = data.length;
-		var xStep = width / n;
-
-		//analyser.getByteFrequencyData(data);
-		analyser.getByteTimeDomainData(data);
-
-		graphics.lineStyle(1, 0xffffff);
-		graphics.moveTo(0, 256 - data[0]);
-
-		for (i in 0...n) graphics.lineTo(i * xStep, (256 - data[i]));
 	}
 
 

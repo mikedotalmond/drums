@@ -1,5 +1,6 @@
 package drums;
 
+import hxsignal.Signal;
 import js.html.audio.AudioBuffer;
 import js.html.audio.AudioContext;
 import js.html.audio.AudioNode;
@@ -25,13 +26,15 @@ class DrumSequencer {
 
 	var tracks	:Array<Track>;
 
-	var bpm			:Float = 140;
+	var bpm			:Float = 120;
 	var tickLength	:Float = 1/4;
 
 	var tickIndex	:Int = -1;
 	var lastTick	:Int = 0;
 	var timeTrack	:AudioBase;
 
+
+	public var tick(default, null):Signal<Int->Void>;
 	public var outGain(default, null):GainNode;
 	public var context(default, null):AudioContext;
 
@@ -42,6 +45,7 @@ class DrumSequencer {
 		outGain = context.createGain();
 		outGain.connect(destination == null ? context.destination : destination);
 
+		tick = new Signal<Int->Void>();
 		tracks = [];
 
 		loadSamples();
@@ -50,7 +54,9 @@ class DrumSequencer {
 
 	function loadSamples() {
 		var request = new XMLHttpRequest();
-		request.open("GET", 'data/samples/kick.wav', true);
+		//request.open("GET", 'data/samples/808_Cowbell.wav', true);
+		request.open("GET", 'data/samples/808_Snare01.wav', true);
+		//request.open("GET", 'data/samples/808_Kick01.wav', true);
 		request.responseType = XMLHttpRequestResponseType.ARRAYBUFFER;
 		request.onload = function(_) context.decodeAudioData(_.currentTarget.response, sampleDecoded);
 		request.send();
@@ -81,10 +87,13 @@ class DrumSequencer {
 
 		timeTrack.addTimedEvent(nextTick);
 
+		tick.emit(tickIndex);
+
 		tickIndex++;
 		if (tickIndex == stepCount) tickIndex = 0;
 
 		playTick(tickIndex, nextTick);
+
 	}
 
 
@@ -139,7 +148,7 @@ class Track {
 		// some initial events...
 		events = [];
 		for (i in 0...stepCount) {
-			var rate = 1.0 + ((1 * i) / 8);
+			var rate = 1.25 - ((1 * i) / 16);
 			events.push({
 				active:i % 4 == 0,
 				volume: 1,
