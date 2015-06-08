@@ -44,6 +44,7 @@ class Samples extends AudioBase {
 	 */
     public function playSample(buffer:AudioBuffer, delayBy:Float = .0, autoRelease:Bool = true):Int {
 
+		if (buffer != null) this.buffer = buffer;
 		if (delayBy < 0) delayBy = 0;
 
 		var id = nextID();
@@ -58,7 +59,7 @@ class Samples extends AudioBase {
 		envelope.gain.setTargetAtTime(volume, triggerTime, TimeUtil.getTimeConstant(attack));
 
 		var src = context.createBufferSource();
-		src.buffer = buffer;
+		src.buffer = this.buffer;
 		src.playbackRate.value = playbackRate;
 
 		src.connect(envelope);

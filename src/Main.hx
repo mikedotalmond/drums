@@ -1,5 +1,6 @@
 package;
 
+import drums.DrumSequencer;
 import js.Browser;
 import js.html.*;
 import js.html.audio.*;
@@ -47,8 +48,8 @@ class Main extends Application {
 		analyserData = new Uint8Array(analyser.frequencyBinCount);
 
 		// test
-		var samples = new SamplesBasic(audioContext, outGain);
-		samples.outGain.connect(analyser);
+		var drums = new DrumSequencer(audioContext, outGain);
+		drums.outGain.connect(analyser);
 	}
 
 
@@ -92,6 +93,7 @@ class Main extends Application {
 		var n = data.length;
 		var xStep = width / n;
 
+		//analyser.getByteFrequencyData(data);
 		analyser.getByteTimeDomainData(data);
 
 		graphics.lineStyle(1, 0xffffff);
@@ -99,7 +101,6 @@ class Main extends Application {
 
 		for (i in 0...n) graphics.lineTo(i * xStep, (256 - data[i]));
 	}
-
 
 
 	static function main() {
