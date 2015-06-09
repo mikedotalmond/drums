@@ -53,13 +53,14 @@ class DrumSequencer {
 
 
 	function loadSamples() {
-		var request = new XMLHttpRequest();
-		//request.open("GET", 'data/samples/808_Cowbell.wav', true);
-		request.open("GET", 'data/samples/808_Snare01.wav', true);
-		//request.open("GET", 'data/samples/808_Kick01.wav', true);
-		request.responseType = XMLHttpRequestResponseType.ARRAYBUFFER;
-		request.onload = function(_) context.decodeAudioData(_.currentTarget.response, sampleDecoded);
-		request.send();
+		var names:Array<String> = ['Clave01', 'Clave02', 'Cowbell', 'Kick01', 'Rim01', 'Rim02', 'Snare01', 'Snare01'];
+		for (name in names) {
+			var request = new XMLHttpRequest();
+			request.open("GET", 'data/samples/808_$name.wav', true);
+			request.responseType = XMLHttpRequestResponseType.ARRAYBUFFER;
+			request.onload = function(_) context.decodeAudioData(_.currentTarget.response, sampleDecoded);
+			request.send();
+		}
 	}
 
 
@@ -70,11 +71,11 @@ class DrumSequencer {
 		if (tracks.length == 1) {
 			timeTrack = tracks[0].source;
 			timeTrack.timedEvent.connect(onTrackTick);
+		} else if (tracks.length == 8) {
+			// (all samples loaded) start in 1 tick...
+			tickIndex = -1;
+			timeTrack.addTimedEvent(context.currentTime + TimeUtil.stepTime(tickLength, bpm));
 		}
-
-		// (all samples loaded) start in 1 tick...
-		tickIndex = -1;
-		timeTrack.addTimedEvent(context.currentTime + TimeUtil.stepTime(tickLength, bpm));
 	}
 
 

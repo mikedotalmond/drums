@@ -49,7 +49,7 @@ class Main extends Application {
 
 		audioContext = AudioBase.createContext();
 		outGain = audioContext.createGain();
-		outGain.gain.value = .2;
+		outGain.gain.value = .15;
 		outGain.connect(audioContext.destination);
 
 		drums = new DrumSequencer(audioContext, outGain);
