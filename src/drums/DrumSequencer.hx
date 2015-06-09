@@ -24,13 +24,13 @@ import js.html.XMLHttpRequest;
  */
 class DrumSequencer {
 
-	var tracks:Array<Track>;
 	var tickLength:Float = 1/4;
 	var tickIndex:Int = -1;
 	var lastTick:Int = 0;
 	var timeTrack:AudioBase;
 
 	public var bpm:Float = 120;
+	public var tracks(default, null):Array<Track>;
 	public var tick(default, null):Signal<Int->Void>;
 	public var outGain(default, null):GainNode;
 	public var context(default, null):AudioContext;
@@ -151,7 +151,7 @@ class Track {
 			var rate = 1.1 - ((1 + Math.random()*i) / 16);
 			if (Math.random() < .5) rate = 2 - rate;
 			events.push({
-				active:i % Std.int(Math.random()*15) == 0,
+				active:Std.int(16*Math.random()) % Std.int(Math.random()*16) == 0,
 				volume: .8 + Math.random() * .2,
 				pan: Math.random() * (-.5 + (i/(stepCount*2))),
 				rate: rate,

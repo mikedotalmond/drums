@@ -74,7 +74,7 @@ class Main extends Application {
 
 		start(Application.AUTO);
 
-		var txt = new Text('Just a test...', {font : 'normal 24px Raleway', fill : 'white', align : 'lefts'});
+		var txt = new Text('Drums', {font : 'normal 24px Raleway', fill : 'white', align : 'lefts'});
 		stage.addChild(txt);
 		txt.position.x = 10;
 		txt.position.y = 10;
@@ -97,7 +97,7 @@ class Main extends Application {
 
 
 	function initStepGrid() {
-		sequenceGrid = new SequenceGrid(600,320);
+		sequenceGrid = new SequenceGrid(600,320, drums);
 		stage.addChild(sequenceGrid);
 	}
 
@@ -108,8 +108,8 @@ class Main extends Application {
 
 
 	function stageResized() {
-		var w2 = width / 2;
-		var h2 = height / 2;
+		var w2 = (width / 2) + 20;
+		var h2 = (height / 2) - 40;
 
 		beatLines.position.x = w2 - beatLines.displayWidth / 2;
 		beatLines.position.y = h2 - beatLines.displayHeight / 2;

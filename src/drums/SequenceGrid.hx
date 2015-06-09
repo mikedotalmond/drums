@@ -1,4 +1,5 @@
 package drums;
+import drums.DrumSequencer;
 import pixi.core.display.Container;
 import pixi.core.graphics.Graphics;
 import tones.utils.TimeUtil;
@@ -20,10 +21,12 @@ class SequenceGrid extends Container {
 	var xStep:Float;
 	var yStep:Float;
 	var cells:Array<Array<Graphics>>;
+	var drums:DrumSequencer;
 
-	public function new(displayWidth:Int, displayHeight:Int) {
+	public function new(displayWidth:Int, displayHeight:Int, drums:DrumSequencer) {
 		super();
 
+		this.drums = drums;
 		this.displayWidth = displayWidth;
 		this.displayHeight = displayHeight;
 
@@ -54,6 +57,7 @@ class SequenceGrid extends Container {
 		background.interactive = false;
 		background.interactiveChildren = false;
 		background.cacheAsBitmap = true;
+		//background.alpha = .96;
 		addChild(background);
 
 		for (i in 0...trackCount) {
@@ -77,10 +81,31 @@ class SequenceGrid extends Container {
 	public function tick(index:Int) {
 		if (index < 0) return;
 
+		var cell;
+		var event;
+		var tracks = drums.tracks;
+		for (i in 0...trackCount) {
+			event =  tracks[i].events[index];
+			if (event.active) {
+				cell = cells[i][index];
+				drawCell(cell, cellSize, 0xffffff);
+			}
+		}
 	}
 
 	function update(dt) {
 
-	}
+		var cell;
+		var targetSize = cellSize / 2;
+		for (i in 0...trackCount) {
+			for (j in 0...stepCount) {
+				cell = cells[i][j];
+				if (cell.width > targetSize) {
+					var size = Std.int(cell.width - (cell.width-targetSize) * .15);
+					drawCell(cell, size, 0xffffff);
+				}
+			}
+		}
 
+	}
 }
