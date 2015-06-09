@@ -3,6 +3,7 @@ package;
 import drums.BeatLines;
 import drums.DrumSequencer;
 import drums.Oscilliscope;
+import drums.SequenceGrid;
 import js.Browser;
 import js.html.*;
 import js.html.audio.*;
@@ -29,6 +30,7 @@ class Main extends Application {
 
 	var drums:DrumSequencer;
 	var oscilliscope:Oscilliscope;
+	var sequenceGrid:SequenceGrid;
 	var beatLines:BeatLines;
 
 	public function new() {
@@ -37,9 +39,9 @@ class Main extends Application {
 		initAudio();
 		initPixi();
 
+		initOscilliscope();
 		initBeatLines();
 		initStepGrid();
-		initOscilliscope();
 
 		stageResized();
 	}
@@ -49,15 +51,17 @@ class Main extends Application {
 
 		audioContext = AudioBase.createContext();
 		outGain = audioContext.createGain();
-		outGain.gain.value = .15;
+		outGain.gain.value = .2;
 		outGain.connect(audioContext.destination);
 
 		drums = new DrumSequencer(audioContext, outGain);
 		drums.tick.connect(onSequenceTick);
 	}
 
+
 	function onSequenceTick(index:Int) {
 		beatLines.tick(index);
+		sequenceGrid.tick(index);
 	}
 
 
@@ -80,8 +84,8 @@ class Main extends Application {
 
 
 	function initOscilliscope() {
-		oscilliscope = new Oscilliscope(audioContext, 640, 320);
-		//stage.addChild(oscilliscope);
+		oscilliscope = new Oscilliscope(audioContext, 568, 120);
+		stage.addChild(oscilliscope);
 		drums.outGain.connect(oscilliscope.analyser);
 	}
 
@@ -93,7 +97,8 @@ class Main extends Application {
 
 
 	function initStepGrid() {
-
+		sequenceGrid = new SequenceGrid(600,320);
+		stage.addChild(sequenceGrid);
 	}
 
 
@@ -109,10 +114,11 @@ class Main extends Application {
 		beatLines.position.x = w2 - beatLines.displayWidth / 2;
 		beatLines.position.y = h2 - beatLines.displayHeight / 2;
 
-		oscilliscope.position.x = w2 - oscilliscope.displayWidth / 2;
-		oscilliscope.position.y = h2 - oscilliscope.displayHeight / 2;
+		sequenceGrid.x = beatLines.position.x;
+		sequenceGrid.y = beatLines.position.y;
 
-
+		oscilliscope.position.x = beatLines.position.x - 2;
+		oscilliscope.position.y = 160 + beatLines.position.y + beatLines.displayHeight/2;
 	}
 
 

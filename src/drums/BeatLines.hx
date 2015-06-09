@@ -20,11 +20,21 @@ class BeatLines extends Container {
 	public function new(displayWidth:Int, displayHeight:Int) {
 		super();
 
+		interactive = false;
+		interactiveChildren = false;
+
 		this.displayWidth = displayWidth;
 		this.displayHeight = displayHeight;
 
 		xStep = displayWidth / stepCount;
-		lines = [for (i in 0...stepCount) cast addChild(new Graphics())];
+		lines = [];
+
+		var g;
+		for (i in 0...stepCount) {
+			g = new Graphics();
+			g.position.x = Math.round(xStep * i);
+			lines.push(cast addChild(g));
+		}
 
 		for (i in 0...stepCount) tick(i);
 
@@ -33,17 +43,9 @@ class BeatLines extends Container {
 
 	public function tick(index:Int) {
 		if (index < 0) return;
-
-		var gfx = lines[index];
-
-		var w = lineWidthForStep(index) * 4;
-		var x = Std.int(index * xStep - w / 2);
-
-		gfx.clear();
-		gfx.beginFill(0x00FFBE, 1);
-		gfx.drawRect(x, 0, w, displayHeight);
-		gfx.endFill();
+		drawLine(lines[index], lineWidthForStep(index) * 4);
 	}
+
 
 	function update(dt:Float) {
 		for (i in 0...stepCount) {
@@ -51,17 +53,20 @@ class BeatLines extends Container {
 			var currentWidth = gfx.width;
 			var targetWidth = lineWidthForStep(i);
 			if (currentWidth > targetWidth) {
-
 				var w = currentWidth - (currentWidth - targetWidth) * .2;
-				var x = Std.int(i * xStep - w / 2);
-
-				gfx.clear();
-				gfx.beginFill(0x00FFBE, 1);
-				gfx.drawRect(x, 0, Std.int(w), displayHeight);
-				gfx.endFill();
+				drawLine(gfx, w);
 			}
 		}
 	}
+
+
+	function drawLine(g:Graphics, w:Float) {
+		g.clear();
+		g.beginFill(0x00FFBE, 1);
+		g.drawRect((-w/2), -20, w, displayHeight);
+		g.endFill();
+	}
+
 
 	function lineWidthForStep(index:Int) {
 		return 	(index % 4 == 0) ? 6 :

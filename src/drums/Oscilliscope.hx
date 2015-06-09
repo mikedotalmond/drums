@@ -24,7 +24,7 @@ class Oscilliscope extends Graphics {
 		displayHeight = height;
 
 		analyser = audioContext.createAnalyser();
-		analyser.smoothingTimeConstant = .1;
+		analyser.smoothingTimeConstant = .8; // the default
 		analyser.fftSize = 512;
 		analyserData = new Uint8Array(analyser.frequencyBinCount);
 	}
@@ -43,7 +43,7 @@ class Oscilliscope extends Graphics {
 		//analyser.getByteFrequencyData(data);
 		analyser.getByteTimeDomainData(data);
 
-		lineStyle(1, 0xffffff);
+		lineStyle(2, 0xffffff);
 		moveTo(0, displayHeight - data[0] * yScale);
 
 		for (i in 0...n) lineTo(i * xStep, (displayHeight - data[i] * yScale));
