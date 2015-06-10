@@ -34,6 +34,8 @@ class DrumSequencer {
 	public var tick(default, null):Signal<Int->Void>;
 	public var outGain(default, null):GainNode;
 	public var context(default, null):AudioContext;
+	public var ready(default, null):Signal<Void->Void>;
+
 
 	public function new(audioContext:AudioContext=null, destination:AudioNode=null) {
 
@@ -42,6 +44,7 @@ class DrumSequencer {
 		outGain = context.createGain();
 		outGain.connect(destination == null ? context.destination : destination);
 
+		ready = new Signal<Void->Void>();
 		tick = new Signal<Int->Void>();
 		tracks = [];
 
@@ -72,6 +75,7 @@ class DrumSequencer {
 			// (all samples loaded) start in 1 tick...
 			tickIndex = -1;
 			timeTrack.addTimedEvent(context.currentTime + TimeUtil.stepTime(tickLength, bpm));
+			ready.emit();
 		}
 	}
 

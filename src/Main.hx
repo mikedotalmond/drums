@@ -32,9 +32,12 @@ class Main extends Application {
 	var oscilliscope:Oscilliscope;
 	var sequenceGrid:SequenceGrid;
 	var beatLines:BeatLines;
+	var ready:Bool;
 
 	public function new() {
 		super();
+
+		ready = false;
 
 		initAudio();
 		initPixi();
@@ -56,6 +59,12 @@ class Main extends Application {
 
 		drums = new DrumSequencer(audioContext, outGain);
 		drums.tick.connect(onSequenceTick);
+		drums.ready.connect(onDrumsReady);
+	}
+
+
+	function onDrumsReady() {
+		ready = true;
 	}
 
 
@@ -103,7 +112,9 @@ class Main extends Application {
 
 
 	function tick(dt:Float) {
+		if (!ready) return;
 		oscilliscope.update(dt);
+		sequenceGrid.update(dt);
 	}
 
 

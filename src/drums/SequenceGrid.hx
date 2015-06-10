@@ -35,9 +35,6 @@ class SequenceGrid extends Container {
 		cells = [];
 
 		createCells();
-
-
-		TimeUtil.frameTick.connect(update);
 	}
 
 	function createCells() {
@@ -57,7 +54,6 @@ class SequenceGrid extends Container {
 		background.interactive = false;
 		background.interactiveChildren = false;
 		background.cacheAsBitmap = true;
-		//background.alpha = .96;
 		addChild(background);
 
 		for (i in 0...trackCount) {
@@ -66,9 +62,17 @@ class SequenceGrid extends Container {
 				g = new Graphics();
 				g.position.x = Math.round(j * xStep);
 				g.position.y = Math.round(i * yStep);
+				g.interactive = true;
+				g.on('mousedown', onDown);
+				g.on('touchstart', onDown);
+				//drawCell(g, cellSize/2, 0);
 				cells[i].push(cast addChild(g));
 			}
 		}
+	}
+
+	function onDown(data) {
+		trace(data);
 	}
 
 	function drawCell(g:Graphics, size:Float, color:Int) {
@@ -84,28 +88,45 @@ class SequenceGrid extends Container {
 		var cell;
 		var event;
 		var tracks = drums.tracks;
+
 		for (i in 0...trackCount) {
-			event =  tracks[i].events[index];
+			event = tracks[i].events[index];
 			if (event.active) {
 				cell = cells[i][index];
+				cell.lineColor = 0xffffff;
 				drawCell(cell, cellSize, 0xffffff);
 			}
 		}
 	}
 
-	function update(dt) {
+	public function update(dt) {
 
+		var c;
 		var cell;
+		var tracks = drums.tracks;
 		var targetSize = cellSize / 2;
+
 		for (i in 0...trackCount) {
 			for (j in 0...stepCount) {
 				cell = cells[i][j];
 				if (cell.width > targetSize) {
 					var size = Std.int(cell.width - (cell.width-targetSize) * .15);
 					drawCell(cell, size, 0xffffff);
+				} else {
+					c = (tracks[i].events[j].active) ? 0xffffff : 0x121212;
+					if (cell.lineColor != c) {
+						cell.lineColor = c; // use to store the colour once set - prevent drawing the same thing again and again
+						drawCell(cell, targetSize, c);
+					}
+				}
+
+
+				// *really* doesn't belong here, but i quite like it. TODO: move it
+				// slowly randomise the sequence over time
+				if ( Math.random() > .9998) {
+					tracks[i].events[j].active = Math.round(Math.random()) == 1;
 				}
 			}
 		}
-
 	}
 }
