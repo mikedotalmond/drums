@@ -43,7 +43,7 @@ class Oscilliscope extends Graphics {
 		//analyser.getByteFrequencyData(data);
 		analyser.getByteTimeDomainData(data);
 
-		lineStyle(2, 0xffffff);
+		lineStyle(2, 0x747474);
 		moveTo(0, displayHeight - data[0] * yScale);
 
 		for (i in 0...n) lineTo(i * xStep, (displayHeight - data[i] * yScale));
