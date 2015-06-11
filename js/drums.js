@@ -163,6 +163,21 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 	,onSequenceTick: function(index) {
 		this.beatLines.tick(index);
 		this.sequenceGrid.tick(index);
+		if(index == 0 && Math.random() > .5) {
+			var tmp;
+			var x = Math.random() * 8;
+			tmp = x | 0;
+			this.drums.tracks[tmp].randomise();
+		}
+		if(Math.random() > .75) {
+			var tmp1;
+			var x1 = Math.random() * 8;
+			tmp1 = x1 | 0;
+			var tmp2;
+			var x2 = Math.random() * 16;
+			tmp2 = x2 | 0;
+			this.drums.tracks[tmp1].events[tmp2].active = Math.round(Math.random()) == 1;
+		}
 	}
 	,initPixi: function() {
 		this.backgroundColor = 3355443;
@@ -265,9 +280,10 @@ drums_BeatLines.prototype = $extend(PIXI.Container.prototype,{
 	}
 });
 var drums_DrumSequencer = function(audioContext,destination) {
-	this.bpm = 120;
 	this.tickIndex = -1;
 	this.tickLength = 0.25;
+	this.bpm = 60 + Math.random() * 100;
+	console.log("bpm:" + this.bpm);
 	this.context = audioContext == null?tones_AudioBase.createContext():audioContext;
 	this.outGain = this.context.createGain();
 	this.outGain.connect(destination == null?this.context.destination:destination);
@@ -340,24 +356,40 @@ var drums_Track = function(buffer,context,destination) {
 	this.source = new tones_Samples(context,this.panNode);
 	this.source.set_attack(0);
 	this.source.buffer = buffer;
-	this.events = [];
-	var _g = 0;
-	while(_g < 16) {
-		var i = _g++;
-		var rate = 1.1 - (1 + Math.random() * i) / 16;
-		if(Math.random() < .5) rate = 2 - rate;
-		var tmp;
-		var x = 16 * Math.random();
-		tmp = x | 0;
-		var tmp1;
-		var x1 = Math.random() * 16;
-		tmp1 = x1 | 0;
-		this.events.push({ active : tmp % tmp1 == 0, volume : .8 + Math.random() * .2, pan : Math.random() * (-0.5 + i / 32), rate : rate, release : buffer.duration / rate});
+	var tmp;
+	var _g = [];
+	var _g1 = 0;
+	while(_g1 < 16) {
+		_g1++;
+		_g.push({ active : false, volume : 1, pan : 0, rate : 1, release : buffer.duration});
 	}
+	tmp = _g;
+	this.events = tmp;
 };
 drums_Track.__name__ = true;
 drums_Track.prototype = {
-	set_pan: function(value) {
+	randomise: function() {
+		var buffer = this.source.buffer;
+		var _g = 0;
+		while(_g < 16) {
+			var i = _g++;
+			var rate = 1.1 - (1 + Math.random() * i) / 3;
+			if(Math.random() < .5) rate = 2 - rate;
+			var e = this.events[i];
+			var tmp;
+			var x = 16 * Math.random();
+			tmp = x | 0;
+			var tmp1;
+			var x1 = Math.random() * 16;
+			tmp1 = x1 | 0;
+			e.active = tmp % tmp1 == 0;
+			e.volume = .8 + Math.random() * .2;
+			e.pan = Math.random() * (-0.5 + i / 32);
+			e.rate = rate;
+			e.release = buffer.duration / rate;
+		}
+	}
+	,set_pan: function(value) {
 		var x = value * 1.5707963267948966;
 		var z = x + 1.5707963267948966;
 		if(z > 1.5707963267948966) z = Math.PI - z;
@@ -489,7 +521,6 @@ drums_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 						this.drawCell(cell,17.,c);
 					}
 				}
-				if(Math.random() > .9998) tracks[i].events[j].active = Math.round(Math.random()) == 1;
 			}
 		}
 	}
