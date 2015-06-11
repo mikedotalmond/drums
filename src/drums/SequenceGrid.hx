@@ -71,9 +71,11 @@ class SequenceGrid extends Container {
 		}
 	}
 
+
 	function onDown(data) {
 		trace(data);
 	}
+
 
 	function drawCell(g:Graphics, size:Float, color:Int) {
 		g.clear();
@@ -81,6 +83,7 @@ class SequenceGrid extends Container {
 		g.drawRect(-(size/2), -(size/2), size, size);
 		g.endFill();
 	}
+
 
 	public function tick(index:Int) {
 		if (index < 0) return;
@@ -98,6 +101,7 @@ class SequenceGrid extends Container {
 			}
 		}
 	}
+
 
 	public function update(dt) {
 
@@ -118,13 +122,6 @@ class SequenceGrid extends Container {
 						cell.lineColor = c; // use to store the colour once set - prevent drawing the same thing again and again
 						drawCell(cell, targetSize, c);
 					}
-				}
-
-
-				// *really* doesn't belong here, but i quite like it. TODO: move it
-				// slowly randomise the sequence over time
-				if ( Math.random() > .9998) {
-					tracks[i].events[j].active = Math.round(Math.random()) == 1;
 				}
 			}
 		}

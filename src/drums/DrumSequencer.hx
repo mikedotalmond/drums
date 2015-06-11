@@ -29,7 +29,7 @@ class DrumSequencer {
 	var lastTick:Int = 0;
 	var timeTrack:AudioBase;
 
-	public var bpm:Float = 120;
+	public var bpm:Float;
 	public var tracks(default, null):Array<Track>;
 	public var tick(default, null):Signal<Int->Void>;
 	public var outGain(default, null):GainNode;
@@ -38,6 +38,9 @@ class DrumSequencer {
 
 
 	public function new(audioContext:AudioContext=null, destination:AudioNode=null) {
+
+		bpm = 60 + Math.random() * 100;
+		trace('bpm:$bpm');
 
 		context = (audioContext == null ? AudioBase.createContext() : audioContext);
 
@@ -94,10 +97,6 @@ class DrumSequencer {
 		tickIndex++;
 		if (tickIndex == stepCount) tickIndex = 0;
 
-		if (tickIndex == 0 && Math.random()>.5) {
-			tracks[Std.int(Math.random()*8)].randomise();
-		}
-
 		playTick(tickIndex, nextTick);
 
 	}
@@ -152,17 +151,18 @@ class Track {
 		source.attack = 0;
 		source.buffer = buffer;
 
-		events = [for (i in 0...stepCount) { active:false, volume:0, pan:0, rate:1, release:0 } ];
+		events = [for (i in 0...stepCount) { active:false, volume:1, pan:0, rate:1, release:buffer.duration } ];
 
-		randomise();
+		//randomise();
 	}
+
 
 	public function randomise() {
 
 		var buffer = source.buffer;
 
 		for (i in 0...stepCount) {
-			var rate = 1.1 - ((1 + Math.random()*i) / 16);
+			var rate = 1.1 - ((1 + Math.random()*i) / 3);
 			if (Math.random() < .5) rate = 2 - rate;
 			var e = events[i];
 			e.active = Std.int(16 * Math.random()) % Std.int(Math.random() * 16) == 0;
