@@ -94,6 +94,10 @@ class DrumSequencer {
 		tickIndex++;
 		if (tickIndex == stepCount) tickIndex = 0;
 
+		if (tickIndex == 0 && Math.random()>.5) {
+			tracks[Std.int(Math.random()*8)].randomise();
+		}
+
 		playTick(tickIndex, nextTick);
 
 	}
@@ -124,6 +128,7 @@ class DrumSequencer {
 class Track {
 
 	static inline var HALFPI = 1.5707963267948966;
+	static inline var stepCount = 16;
 
 	public var events(default, null):Array<TrackEvent>;
 	public var source(default, null):Samples;
@@ -147,20 +152,24 @@ class Track {
 		source.attack = 0;
 		source.buffer = buffer;
 
-		var stepCount = 16;
+		events = [for (i in 0...stepCount) { active:false, volume:0, pan:0, rate:1, release:0 } ];
 
-		// some initial events...
-		events = [];
+		randomise();
+	}
+
+	public function randomise() {
+
+		var buffer = source.buffer;
+
 		for (i in 0...stepCount) {
 			var rate = 1.1 - ((1 + Math.random()*i) / 16);
 			if (Math.random() < .5) rate = 2 - rate;
-			events.push({
-				active:Std.int(16*Math.random()) % Std.int(Math.random()*16) == 0,
-				volume: .8 + Math.random() * .2,
-				pan: Math.random() * (-.5 + (i/(stepCount*2))),
-				rate: rate,
-				release: buffer.duration / rate,
-			});
+			var e = events[i];
+			e.active = Std.int(16 * Math.random()) % Std.int(Math.random() * 16) == 0;
+			e.volume = .8 + Math.random() * .2;
+			e.pan = Math.random() * ( -.5 + (i / (stepCount * 2)));
+			e.rate = rate;
+			e.release = buffer.duration / rate;
 		}
 	}
 
