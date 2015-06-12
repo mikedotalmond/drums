@@ -8,6 +8,11 @@ function $extend(from, fields) {
 }
 var HxOverrides = function() { };
 HxOverrides.__name__ = true;
+HxOverrides.cca = function(s,index) {
+	var x = s.charCodeAt(index);
+	if(x != x) return undefined;
+	return x;
+};
 HxOverrides.iter = function(a) {
 	return { cur : 0, arr : a, hasNext : function() {
 		return this.cur < this.arr.length;
@@ -158,18 +163,19 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 		this.drums.ready.connect($bind(this,this.onDrumsReady));
 	}
 	,onDrumsReady: function() {
+		this.drums.bpm = 60 + Math.random() * 100;
 		this.ready = true;
 	}
 	,onSequenceTick: function(index) {
 		this.beatLines.tick(index);
 		this.sequenceGrid.tick(index);
-		if(index == 0 && Math.random() > .5) {
+		if(index == 0 && Math.random() > .75) {
 			var tmp;
 			var x = Math.random() * 8;
 			tmp = x | 0;
 			this.drums.tracks[tmp].randomise();
 		}
-		if(Math.random() > .75) {
+		if(Math.random() > .9) {
 			var tmp1;
 			var x1 = Math.random() * 8;
 			tmp1 = x1 | 0;
@@ -225,6 +231,14 @@ var Reflect = function() { };
 Reflect.__name__ = true;
 Reflect.compare = function(a,b) {
 	return a == b?0:a > b?1:-1;
+};
+var Std = function() { };
+Std.__name__ = true;
+Std.parseInt = function(x) {
+	var v = parseInt(x,10);
+	if(v == 0 && (HxOverrides.cca(x,1) == 120 || HxOverrides.cca(x,1) == 88)) v = parseInt(x);
+	if(isNaN(v)) return null;
+	return v;
 };
 var drums_BeatLines = function(displayWidth,displayHeight) {
 	PIXI.Container.call(this);
@@ -282,8 +296,7 @@ drums_BeatLines.prototype = $extend(PIXI.Container.prototype,{
 var drums_DrumSequencer = function(audioContext,destination) {
 	this.tickIndex = -1;
 	this.tickLength = 0.25;
-	this.bpm = 60 + Math.random() * 100;
-	console.log("bpm:" + this.bpm);
+	this.bpm = 120;
 	this.context = audioContext == null?tones_AudioBase.createContext():audioContext;
 	this.outGain = this.context.createGain();
 	this.outGain.connect(destination == null?this.context.destination:destination);
@@ -471,12 +484,17 @@ drums_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 				g.interactive = true;
 				g.on("mousedown",$bind(this,this.onDown));
 				g.on("touchstart",$bind(this,this.onDown));
+				g.name = "" + i1 + "," + j1;
 				this.cells[i1].push(this.addChild(g));
 			}
 		}
 	}
 	,onDown: function(data) {
-		console.log(data);
+		var values = data.target.name.split(",");
+		var trackIndex = Std.parseInt(values[0]);
+		var tickIndex = Std.parseInt(values[1]);
+		var event = this.drums.tracks[trackIndex].events[tickIndex];
+		event.active = !event.active;
 	}
 	,drawCell: function(g,size,color) {
 		g.clear();
