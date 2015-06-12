@@ -139,7 +139,6 @@ var Main = function() {
 	this.ready = false;
 	this.initAudio();
 	this.initPixi();
-	this.initOscilliscope();
 	this.initBeatLines();
 	this.initStepGrid();
 	this.stageResized();
@@ -169,7 +168,7 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 	,onSequenceTick: function(index) {
 		this.beatLines.tick(index);
 		this.sequenceGrid.tick(index);
-		if(index == 0 && Math.random() > .75) {
+		if(index == 0 && Math.random() > .8) {
 			var tmp;
 			var x = Math.random() * 8;
 			tmp = x | 0;
@@ -197,33 +196,26 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 		txt.position.y = 10;
 		this.stage.interactive = true;
 	}
-	,initOscilliscope: function() {
-		this.oscilliscope = new drums_Oscilliscope(this.audioContext,568,120);
-		this.stage.addChild(this.oscilliscope);
-		this.drums.outGain.connect(this.oscilliscope.analyser);
-	}
 	,initBeatLines: function() {
-		this.beatLines = new drums_BeatLines(600,320);
+		this.beatLines = new drums_BeatLines(900,460);
 		this.stage.addChild(this.beatLines);
 	}
 	,initStepGrid: function() {
-		this.sequenceGrid = new drums_SequenceGrid(600,320,this.drums);
+		this.sequenceGrid = new drums_SequenceGrid(900,460,this.drums);
 		this.stage.addChild(this.sequenceGrid);
 	}
 	,tick: function(dt) {
 		if(!this.ready) return;
-		this.oscilliscope.update(dt);
 		this.sequenceGrid.update(dt);
 	}
 	,stageResized: function() {
-		var w2 = this.width / 2 + 20;
-		var h2 = this.height / 2 - 40;
-		this.beatLines.position.x = w2 - this.beatLines.displayWidth / 2;
-		this.beatLines.position.y = h2 - this.beatLines.displayHeight / 2;
+		var w2 = this.width / 2 + 28;
+		var h2 = this.height / 2;
+		this.beatLines.displayHeight = Math.round(this.height);
+		this.beatLines.position.x = Math.round(w2 - this.beatLines.displayWidth / 2);
+		this.beatLines.position.y = 0;
 		this.sequenceGrid.x = this.beatLines.position.x;
-		this.sequenceGrid.y = this.beatLines.position.y;
-		this.oscilliscope.position.x = this.beatLines.position.x - 2;
-		this.oscilliscope.position.y = 160 + this.beatLines.position.y + this.beatLines.displayHeight / 2;
+		this.sequenceGrid.y = 28 + Math.round(h2 - this.sequenceGrid.displayHeight / 2);
 	}
 });
 Math.__name__ = true;
@@ -268,7 +260,7 @@ drums_BeatLines.__super__ = PIXI.Container;
 drums_BeatLines.prototype = $extend(PIXI.Container.prototype,{
 	tick: function(index) {
 		if(index < 0) return;
-		this.drawLine(this.lines[index],this.lineWidthForStep(index) * 4);
+		this.drawLine(this.lines[index],this.lineWidthForStep(index) * 3);
 	}
 	,update: function(dt) {
 		var _g = 0;
@@ -286,7 +278,7 @@ drums_BeatLines.prototype = $extend(PIXI.Container.prototype,{
 	,drawLine: function(g,w) {
 		g.clear();
 		g.beginFill(65470,1);
-		g.drawRect(-w / 2,-20,w,this.displayHeight);
+		g.drawRect(-w / 2,0,w,this.displayHeight);
 		g.endFill();
 	}
 	,lineWidthForStep: function(index) {
@@ -308,27 +300,39 @@ var drums_DrumSequencer = function(audioContext,destination) {
 drums_DrumSequencer.__name__ = true;
 drums_DrumSequencer.prototype = {
 	loadSamples: function() {
-		var _g1 = this;
-		var names = ["Clave01","Clave02","Cowbell","Kick01","Rim01","Rim02","Snare01","Snare01"];
-		var _g = 0;
-		while(_g < names.length) {
-			var name = names[_g];
-			++_g;
+		var _g2 = this;
+		this.loadCount = 0;
+		var _g1 = 0;
+		var _g = drums_DrumSequencer.filenames.length;
+		while(_g1 < _g) {
+			var i = [_g1++];
+			this.tracks.push(null);
 			var request = new XMLHttpRequest();
-			request.open("GET","data/samples/808_" + name + ".wav",true);
+			request.open("GET","data/samples/808_" + drums_DrumSequencer.filenames[i[0]] + ".wav",true);
 			request.responseType = "arraybuffer";
-			request.onload = function(_) {
-				_g1.context.decodeAudioData(_.currentTarget.response,$bind(_g1,_g1.sampleDecoded));
-			};
+			request.onload = (function(i) {
+				return function(_) {
+					var tmp;
+					var f = $bind(_g2,_g2.sampleDecoded);
+					var a2 = i[0];
+					tmp = (function() {
+						return function(a1) {
+							f(a1,a2);
+						};
+					})();
+					_g2.context.decodeAudioData(_.currentTarget.response,tmp);
+				};
+			})(i);
 			request.send();
 		}
 	}
-	,sampleDecoded: function(buffer) {
-		this.tracks.push(new drums_Track(buffer,this.context,this.outGain));
-		if(this.tracks.length == 1) {
+	,sampleDecoded: function(buffer,index) {
+		this.tracks[index] = new drums_Track(buffer,this.context,this.outGain);
+		this.loadCount++;
+		if(this.loadCount == 1) {
 			this.timeTrack = this.tracks[0].source;
 			this.timeTrack.timedEvent.connect($bind(this,this.onTrackTick));
-		} else if(this.tracks.length == 8) {
+		} else if(this.loadCount == drums_DrumSequencer.filenames.length) {
 			this.tickIndex = -1;
 			this.timeTrack.addTimedEvent(this.context.currentTime + this.tickLength / (this.bpm / 60));
 			this.ready.emit();
@@ -386,7 +390,7 @@ drums_Track.prototype = {
 		var _g = 0;
 		while(_g < 16) {
 			var i = _g++;
-			var rate = 1.1 - (1 + Math.random() * i) / 3;
+			var rate = 1.1 - (1 + Math.random() * i) / 16;
 			if(Math.random() < .5) rate = 2 - rate;
 			var e = this.events[i];
 			var tmp;
@@ -396,7 +400,7 @@ drums_Track.prototype = {
 			var x1 = Math.random() * 16;
 			tmp1 = x1 | 0;
 			e.active = tmp % tmp1 == 0;
-			e.volume = .8 + Math.random() * .2;
+			e.volume = .7 + Math.random() * .3;
 			e.pan = Math.random() * (-0.5 + i / 32);
 			e.rate = rate;
 			e.release = buffer.duration / rate;
@@ -410,34 +414,6 @@ drums_Track.prototype = {
 		return this._pan = value;
 	}
 };
-var drums_Oscilliscope = function(audioContext,width,height) {
-	PIXI.Graphics.call(this);
-	this.displayWidth = width;
-	this.displayHeight = height;
-	this.analyser = audioContext.createAnalyser();
-	this.analyser.smoothingTimeConstant = .8;
-	this.analyser.fftSize = 512;
-	this.analyserData = new Uint8Array(this.analyser.frequencyBinCount);
-};
-drums_Oscilliscope.__name__ = true;
-drums_Oscilliscope.__super__ = PIXI.Graphics;
-drums_Oscilliscope.prototype = $extend(PIXI.Graphics.prototype,{
-	update: function(dt) {
-		this.clear();
-		var data = this.analyserData;
-		var n = data.length;
-		var xStep = this.displayWidth / n;
-		var yScale = this.displayHeight / 256;
-		this.analyser.getByteTimeDomainData(data);
-		this.lineStyle(2,7631988);
-		this.moveTo(0,this.displayHeight - data[0] * yScale);
-		var _g = 0;
-		while(_g < n) {
-			var i = _g++;
-			this.lineTo(i * xStep,this.displayHeight - data[i] * yScale);
-		}
-	}
-});
 var drums_SequenceGrid = function(displayWidth,displayHeight,drums1) {
 	PIXI.Container.call(this);
 	this.drums = drums1;
@@ -463,7 +439,7 @@ drums_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 				g = new PIXI.Graphics();
 				g.position.x = Math.round(j * this.xStep);
 				g.position.y = Math.round(i * this.yStep);
-				this.drawCell(g,34,0);
+				this.drawCell(g,52,0);
 				background.addChild(g);
 			}
 		}
@@ -514,7 +490,7 @@ drums_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 			if(event.active) {
 				cell = this.cells[i][index];
 				cell.lineColor = 16777215;
-				this.drawCell(cell,34,16777215);
+				this.drawCell(cell,52,16777215);
 			}
 		}
 	}
@@ -529,14 +505,14 @@ drums_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 			while(_g1 < 16) {
 				var j = _g1++;
 				cell = this.cells[i][j];
-				if(cell.width > 17.) {
-					var size = cell.width - (cell.width - 17.) * .15 | 0;
+				if(cell.width > 26.) {
+					var size = cell.width - (cell.width - 26.) * .15 | 0;
 					this.drawCell(cell,size,16777215);
 				} else {
 					c = tracks[i].events[j].active?16777215:1184274;
 					if(cell.lineColor != c) {
 						cell.lineColor = c;
-						this.drawCell(cell,17.,c);
+						this.drawCell(cell,26.,c);
 					}
 				}
 			}
@@ -1182,6 +1158,7 @@ if(node != null) {
 }
 tones_utils_TimeUtil._frameTick = new hxsignal_impl_Signal1();
 window.requestAnimationFrame(tones_utils_TimeUtil.onFrame);
+drums_DrumSequencer.filenames = ["Kick01","Snare01","Snare01","Rim01","Rim02","Clave01","Clave02","Cowbell"];
 haxe_ds_ObjectMap.count = 0;
 Main.main();
 })(typeof console != "undefined" ? console : {log:function(){}});
