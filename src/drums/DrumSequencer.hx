@@ -39,8 +39,7 @@ class DrumSequencer {
 
 	public function new(audioContext:AudioContext=null, destination:AudioNode=null) {
 
-		bpm = 60 + Math.random() * 100;
-		trace('bpm:$bpm');
+		bpm = 120;
 
 		context = (audioContext == null ? AudioBase.createContext() : audioContext);
 

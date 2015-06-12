@@ -64,6 +64,9 @@ class Main extends Application {
 
 
 	function onDrumsReady() {
+		drums.bpm = 60 + Math.random() * 100;
+		//drums.start(0);
+		//drums.stop();
 		ready = true;
 	}
 
@@ -72,13 +75,14 @@ class Main extends Application {
 		beatLines.tick(index);
 		sequenceGrid.tick(index);
 
-
-		if (index == 0 && Math.random() > .5) {
-			drums.tracks[Std.int(Math.random() * 8)].randomise();
-		}
-
-		if ( Math.random() > .75) {
-			drums.tracks[Std.int(Math.random() * 8)].events[Std.int(Math.random() * 16)].active = Math.round(Math.random()) == 1;
+		var randomise = true;
+		if (randomise) {
+			if (index == 0 && Math.random() > .75) {
+				drums.tracks[Std.int(Math.random() * 8)].randomise();
+			}
+			if (Math.random() > .9) {
+				drums.tracks[Std.int(Math.random() * 8)].events[Std.int(Math.random() * 16)].active = Math.round(Math.random()) == 1;
+			}
 		}
 	}
 

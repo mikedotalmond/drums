@@ -65,7 +65,7 @@ class SequenceGrid extends Container {
 				g.interactive = true;
 				g.on('mousedown', onDown);
 				g.on('touchstart', onDown);
-				//drawCell(g, cellSize/2, 0);
+				g.name = '$i,$j';
 				cells[i].push(cast addChild(g));
 			}
 		}
@@ -73,7 +73,12 @@ class SequenceGrid extends Container {
 
 
 	function onDown(data) {
-		trace(data);
+		var values:Array<String> = data.target.name.split(',');
+		var trackIndex = Std.parseInt(values[0]);
+		var tickIndex = Std.parseInt(values[1]);
+
+		var event = drums.tracks[trackIndex].events[tickIndex];
+		event.active = !event.active;
 	}
 
 
