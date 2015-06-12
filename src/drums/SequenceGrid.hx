@@ -12,7 +12,7 @@ class SequenceGrid extends Container {
 
 	static inline var trackCount = 8;
 	static inline var stepCount = 16;
-	static inline var cellSize = 34;
+	static inline var cellSize = 52;
 
 
 	public var displayWidth:Int;

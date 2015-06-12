@@ -42,7 +42,7 @@ class Main extends Application {
 		initAudio();
 		initPixi();
 
-		initOscilliscope();
+		//initOscilliscope();
 		initBeatLines();
 		initStepGrid();
 
@@ -77,7 +77,7 @@ class Main extends Application {
 
 		var randomise = true;
 		if (randomise) {
-			if (index == 0 && Math.random() > .75) {
+			if (index == 0 && Math.random() > .8) {
 				drums.tracks[Std.int(Math.random() * 8)].randomise();
 			}
 			if (Math.random() > .9) {
@@ -113,36 +113,37 @@ class Main extends Application {
 
 
 	function initBeatLines() {
-		beatLines = new BeatLines(600, 320);
+		beatLines = new BeatLines(900, 460);
 		stage.addChild(beatLines);
 	}
 
 
 	function initStepGrid() {
-		sequenceGrid = new SequenceGrid(600,320, drums);
+		sequenceGrid = new SequenceGrid(900,460, drums);
 		stage.addChild(sequenceGrid);
 	}
 
 
 	function tick(dt:Float) {
 		if (!ready) return;
-		oscilliscope.update(dt);
+		//oscilliscope.update(dt);
 		sequenceGrid.update(dt);
 	}
 
 
 	function stageResized() {
-		var w2 = (width / 2) + 20;
-		var h2 = (height / 2) - 40;
+		var w2 = (width / 2) + 28;
+		var h2 = (height / 2);// - 40;
 
-		beatLines.position.x = w2 - beatLines.displayWidth / 2;
-		beatLines.position.y = h2 - beatLines.displayHeight / 2;
+		beatLines.displayHeight = Math.round(height);
+		beatLines.position.x = Math.round(w2 - beatLines.displayWidth / 2);
+		beatLines.position.y = 0;
 
 		sequenceGrid.x = beatLines.position.x;
-		sequenceGrid.y = beatLines.position.y;
+		sequenceGrid.y = 28+Math.round(h2 - sequenceGrid.displayHeight / 2);
 
-		oscilliscope.position.x = beatLines.position.x - 2;
-		oscilliscope.position.y = 160 + beatLines.position.y + beatLines.displayHeight/2;
+		//oscilliscope.position.x = beatLines.position.x - 2;
+		//oscilliscope.position.y = 160 + beatLines.position.y + beatLines.displayHeight/2;
 	}
 
 

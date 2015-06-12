@@ -24,6 +24,9 @@ import js.html.XMLHttpRequest;
  */
 class DrumSequencer {
 
+	static var filenames:Array<String> = ['Kick01', 'Snare01', 'Snare01', 'Rim01', 'Rim02', 'Clave01', 'Clave02', 'Cowbell'];
+
+	var loadCount:Int;
 	var tickLength:Float = 1/4;
 	var tickIndex:Int = -1;
 	var lastTick:Int = 0;
@@ -55,25 +58,26 @@ class DrumSequencer {
 
 
 	function loadSamples() {
-		var names:Array<String> = ['Clave01', 'Clave02', 'Cowbell', 'Kick01', 'Rim01', 'Rim02', 'Snare01', 'Snare01'];
-		for (name in names) {
+		loadCount = 0;
+		for (i in 0...filenames.length) {
+			tracks.push(null);
 			var request = new XMLHttpRequest();
-			request.open("GET", 'data/samples/808_$name.wav', true);
+			request.open("GET", 'data/samples/808_${filenames[i]}.wav', true);
 			request.responseType = XMLHttpRequestResponseType.ARRAYBUFFER;
-			request.onload = function(_) context.decodeAudioData(_.currentTarget.response, sampleDecoded);
+			request.onload = function(_) context.decodeAudioData(_.currentTarget.response, sampleDecoded.bind(_,i));
 			request.send();
 		}
 	}
 
+	function sampleDecoded(buffer:AudioBuffer, index:Int) {
 
-	function sampleDecoded(buffer:AudioBuffer) {
+		tracks[index] = new Track(buffer, context, outGain);
+		loadCount++;
 
-		tracks.push(new Track(buffer, context, outGain));
-
-		if (tracks.length == 1) {
+		if (loadCount == 1) {
 			timeTrack = tracks[0].source;
 			timeTrack.timedEvent.connect(onTrackTick);
-		} else if (tracks.length == 8) {
+		} else if (loadCount == filenames.length) {
 			// (all samples loaded) start in 1 tick...
 			tickIndex = -1;
 			timeTrack.addTimedEvent(context.currentTime + TimeUtil.stepTime(tickLength, bpm));
@@ -161,11 +165,11 @@ class Track {
 		var buffer = source.buffer;
 
 		for (i in 0...stepCount) {
-			var rate = 1.1 - ((1 + Math.random()*i) / 3);
+			var rate = 1.1 - ((1 + Math.random()*i) / stepCount);
 			if (Math.random() < .5) rate = 2 - rate;
 			var e = events[i];
 			e.active = Std.int(16 * Math.random()) % Std.int(Math.random() * 16) == 0;
-			e.volume = .8 + Math.random() * .2;
+			e.volume = .7 + Math.random() * .3;
 			e.pan = Math.random() * ( -.5 + (i / (stepCount * 2)));
 			e.rate = rate;
 			e.release = buffer.duration / rate;

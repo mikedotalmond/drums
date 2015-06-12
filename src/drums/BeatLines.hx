@@ -43,7 +43,7 @@ class BeatLines extends Container {
 
 	public function tick(index:Int) {
 		if (index < 0) return;
-		drawLine(lines[index], lineWidthForStep(index) * 4);
+		drawLine(lines[index], lineWidthForStep(index) * 3);
 	}
 
 
@@ -63,7 +63,7 @@ class BeatLines extends Container {
 	function drawLine(g:Graphics, w:Float) {
 		g.clear();
 		g.beginFill(0x00FFBE, 1);
-		g.drawRect((-w/2), -20, w, displayHeight);
+		g.drawRect((-w/2), 0, w, displayHeight);
 		g.endFill();
 	}
 
