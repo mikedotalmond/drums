@@ -135,6 +135,7 @@ pixi_plugins_app_Application.prototype = {
 	}
 };
 var Main = function() {
+	var _g1 = this;
 	pixi_plugins_app_Application.call(this);
 	this.ready = false;
 	this.initAudio();
@@ -142,6 +143,15 @@ var Main = function() {
 	this.initBeatLines();
 	this.initStepGrid();
 	this.stageResized();
+	window.addEventListener("keydown",function(e) {
+		console.log(e.keyCode);
+		var _g = e.keyCode;
+		switch(_g) {
+		case 32:
+			if(_g1.drums.playing) _g1.drums.stop(); else _g1.drums.play();
+			break;
+		}
+	});
 };
 Main.__name__ = true;
 Main.main = function() {
@@ -162,8 +172,9 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 		this.drums.ready.connect($bind(this,this.onDrumsReady));
 	}
 	,onDrumsReady: function() {
-		this.drums.bpm = 60 + Math.random() * 100;
 		this.ready = true;
+		this.drums.set_bpm(60 + Math.random() * 80);
+		this.drums.play(0);
 	}
 	,onSequenceTick: function(index) {
 		this.beatLines.tick(index);
@@ -287,8 +298,8 @@ drums_BeatLines.prototype = $extend(PIXI.Container.prototype,{
 });
 var drums_DrumSequencer = function(audioContext,destination) {
 	this.tickIndex = -1;
-	this.tickLength = 0.25;
-	this.bpm = 120;
+	this.set_bpm(120);
+	this.playing = false;
 	this.context = audioContext == null?tones_AudioBase.createContext():audioContext;
 	this.outGain = this.context.createGain();
 	this.outGain.connect(destination == null?this.context.destination:destination);
@@ -299,7 +310,19 @@ var drums_DrumSequencer = function(audioContext,destination) {
 };
 drums_DrumSequencer.__name__ = true;
 drums_DrumSequencer.prototype = {
-	loadSamples: function() {
+	play: function(tick) {
+		if(tick == null) tick = 0;
+		this.playing = true;
+		this.tickIndex = tick - 1;
+		this.timeTrack.removeAllTimedEvents();
+		this.timeTrack.addTimedEvent(this.context.currentTime + 0.0083333333333333332);
+	}
+	,stop: function() {
+		this.playing = false;
+		this.tickIndex = -1;
+		this.timeTrack.removeAllTimedEvents();
+	}
+	,loadSamples: function() {
 		var _g2 = this;
 		this.loadCount = 0;
 		var _g1 = 0;
@@ -332,15 +355,12 @@ drums_DrumSequencer.prototype = {
 		if(this.loadCount == 1) {
 			this.timeTrack = this.tracks[0].source;
 			this.timeTrack.timedEvent.connect($bind(this,this.onTrackTick));
-		} else if(this.loadCount == drums_DrumSequencer.filenames.length) {
-			this.tickIndex = -1;
-			this.timeTrack.addTimedEvent(this.context.currentTime + this.tickLength / (this.bpm / 60));
-			this.ready.emit();
-		}
+		} else if(this.loadCount == drums_DrumSequencer.filenames.length) this.ready.emit();
 	}
 	,onTrackTick: function(id,time) {
+		if(!this.playing) return;
 		if(time < this.context.currentTime) time = this.context.currentTime;
-		var nextTick = time + this.tickLength / (this.bpm / 60);
+		var nextTick = time + 0.25 / (this._bpm / 60);
 		this.timeTrack.addTimedEvent(nextTick);
 		this.tick.emit(this.tickIndex);
 		this.tickIndex++;
@@ -363,6 +383,10 @@ drums_DrumSequencer.prototype = {
 				s.playSample(null,time - this.context.currentTime);
 			}
 		}
+	}
+	,set_bpm: function(value) {
+		if(value < 1) value = 1; else if(value > 300) value = 300;
+		return this._bpm = value;
 	}
 };
 var drums_Track = function(buffer,context,destination) {
@@ -1015,6 +1039,9 @@ tones_AudioBase.prototype = {
 		this.timedEvents.push({ id : id, time : time});
 		return id;
 	}
+	,removeAllTimedEvents: function() {
+		this.timedEvents = [];
+	}
 	,set_attack: function(value) {
 		if(value < 0.001) value = 0.001;
 		return this._attack = value;
@@ -1039,34 +1066,34 @@ tones_AudioBase.prototype = {
 		var t = this.context.currentTime;
 		var dt = t - this.lastTime;
 		this.lastTime = t;
-		var nextTime = t + dt * 2;
+		t += dt + dt;
 		var j = 0;
-		var n = this.delayedBegin.length;
+		var n = this.timedEvents.length;
 		while(j < n) {
-			var item = this.delayedBegin[j];
-			if(nextTime > item.time) {
-				this.triggerItemBegin(item.id,item.time);
-				this.delayedBegin.splice(j,1);
-				n--;
-			} else j++;
-		}
-		j = 0;
-		n = this.delayedRelease.length;
-		while(j < n) {
-			var item1 = this.delayedRelease[j];
-			if(nextTime > item1.time) {
-				this.itemRelease.emit(item1.id,item1.time);
-				this.delayedRelease.splice(j,1);
+			var item = this.timedEvents[j];
+			if(t > item.time) {
+				this.timedEvent.emit(item.id,item.time);
+				this.timedEvents.splice(j,1);
 				n--;
 			} else j++;
 		}
 		var j1 = 0;
-		var n1 = this.timedEvents.length;
+		var n1 = this.delayedBegin.length;
 		while(j1 < n1) {
-			var item2 = this.timedEvents[j1];
-			if(nextTime > item2.time) {
-				this.timedEvent.emit(item2.id,item2.time);
-				this.timedEvents.splice(j1,1);
+			var item1 = this.delayedBegin[j1];
+			if(t > item1.time) {
+				this.triggerItemBegin(item1.id,item1.time);
+				this.delayedBegin.splice(j1,1);
+				n1--;
+			} else j1++;
+		}
+		j1 = 0;
+		n1 = this.delayedRelease.length;
+		while(j1 < n1) {
+			var item2 = this.delayedRelease[j1];
+			if(t > item2.time) {
+				this.itemRelease.emit(item2.id,item2.time);
+				this.delayedRelease.splice(j1,1);
 				n1--;
 			} else j1++;
 		}
@@ -1074,7 +1101,7 @@ tones_AudioBase.prototype = {
 		n1 = this.delayedEnd.length;
 		while(j1 < n1) {
 			var item3 = this.delayedEnd[j1];
-			if(t >= item3.time) {
+			if(this.lastTime >= item3.time) {
 				this.doStop(item3.id);
 				this.delayedEnd.splice(j1,1);
 				n1--;
