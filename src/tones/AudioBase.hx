@@ -272,18 +272,31 @@ class AudioBase {
 
 		var t = now;
 		var dt = t - lastTime;
+
 		lastTime = t;
 
-		var nextTime = t + dt * 2;
+		t += (dt+dt);
 		// Estimated 'next+1' frame-time
 		// If an audio event is going to happen between frames, then we want to make sure the signal is triggered beforehand.
 		// Passing the actual audio context time of the event in the signal being triggered allows for accurate sync.
+		var j = 0;
+		var n = timedEvents.length;
+		while (j < n) {
+			var item = timedEvents[j];
+			if (t > item.time) {
+				timedEvent.emit(item.id, item.time);
+				timedEvents.splice(j, 1);
+				n--;
+			} else {
+				j++;
+			}
+		}
 
 		var j = 0;
 		var n = delayedBegin.length;
 		while (j < n) {
 			var item = delayedBegin[j];
-			if (nextTime > item.time) {
+			if (t > item.time) {
 				triggerItemBegin(item.id, item.time);
 				delayedBegin.splice(j, 1);
 				n--;
@@ -296,22 +309,9 @@ class AudioBase {
 		n = delayedRelease.length;
 		while (j < n) {
 			var item = delayedRelease[j];
-			if (nextTime > item.time) {
+			if (t > item.time) {
 				itemRelease.emit(item.id, item.time);
 				delayedRelease.splice(j, 1);
-				n--;
-			} else {
-				j++;
-			}
-		}
-
-		var j = 0;
-		var n = timedEvents.length;
-		while (j < n) {
-			var item = timedEvents[j];
-			if (nextTime > item.time) {
-				timedEvent.emit(item.id, item.time);
-				timedEvents.splice(j, 1);
 				n--;
 			} else {
 				j++;
@@ -322,7 +322,7 @@ class AudioBase {
 		n = delayedEnd.length;
 		while (j < n) {
 			var item = delayedEnd[j];
-			if (t >= item.time) {
+			if (lastTime >= item.time) {
 				doStop(item.id);
 				delayedEnd.splice(j, 1);
 				n--;
