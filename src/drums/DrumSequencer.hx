@@ -25,24 +25,28 @@ import js.html.XMLHttpRequest;
 class DrumSequencer {
 
 	static var filenames:Array<String> = ['Kick01', 'Snare01', 'Snare01', 'Rim01', 'Rim02', 'Clave01', 'Clave02', 'Cowbell'];
+	static inline var tickLength:Float = 1/4;
+	static inline var stepCount:Int = 16;
 
 	var loadCount:Int;
-	var tickLength:Float = 1/4;
 	var tickIndex:Int = -1;
 	var lastTick:Int = 0;
 	var timeTrack:AudioBase;
+	var _bpm:Float;
 
-	public var bpm:Float;
+	public var bpm(get, set):Float;
 	public var tracks(default, null):Array<Track>;
 	public var tick(default, null):Signal<Int->Void>;
 	public var outGain(default, null):GainNode;
 	public var context(default, null):AudioContext;
 	public var ready(default, null):Signal<Void->Void>;
+	public var playing(default, null):Bool;
 
 
 	public function new(audioContext:AudioContext=null, destination:AudioNode=null) {
 
 		bpm = 120;
+		playing = false;
 
 		context = (audioContext == null ? AudioBase.createContext() : audioContext);
 
@@ -54,6 +58,21 @@ class DrumSequencer {
 		tracks = [];
 
 		loadSamples();
+	}
+
+
+	public function play(tick:Int = 0) {
+		playing = true;
+		tickIndex = tick - 1;
+		timeTrack.removeAllTimedEvents();
+		timeTrack.addTimedEvent(context.currentTime + 1/120);
+	}
+
+
+	public function stop() {
+		playing = false;
+		tickIndex = -1;
+		timeTrack.removeAllTimedEvents();
 	}
 
 
@@ -69,6 +88,7 @@ class DrumSequencer {
 		}
 	}
 
+
 	function sampleDecoded(buffer:AudioBuffer, index:Int) {
 
 		tracks[index] = new Track(buffer, context, outGain);
@@ -78,9 +98,6 @@ class DrumSequencer {
 			timeTrack = tracks[0].source;
 			timeTrack.timedEvent.connect(onTrackTick);
 		} else if (loadCount == filenames.length) {
-			// (all samples loaded) start in 1 tick...
-			tickIndex = -1;
-			timeTrack.addTimedEvent(context.currentTime + TimeUtil.stepTime(tickLength, bpm));
 			ready.emit();
 		}
 	}
@@ -88,9 +105,10 @@ class DrumSequencer {
 
 	function onTrackTick(id:Int, time:Float) {
 
+		if (!playing) return;
+
 		if (time < context.currentTime) time = context.currentTime;
 
-		var stepCount = 16;
 		var nextTick = time + TimeUtil.stepTime(tickLength, bpm);
 
 		timeTrack.addTimedEvent(nextTick);
@@ -101,29 +119,30 @@ class DrumSequencer {
 		if (tickIndex == stepCount) tickIndex = 0;
 
 		playTick(tickIndex, nextTick);
-
 	}
 
 
 	function playTick(index:Int, time:Float) {
-
 		for (track in tracks) {
 			var event = track.events[index];
 			if (event.active) {
 				var s = track.source;
-
 				s.volume = event.volume;
 				s.playbackRate = event.rate;
 				s.release = event.release;
 				track.pan = event.pan;
-
 				s.playSample(null, time - context.currentTime);
-				//trace('playSample #$index at $time');
 			}
 		}
 	}
 
-	inline public function getTrack(index:Int) return tracks[index];
+
+	inline function get_bpm():Float return _bpm;
+	function set_bpm(value:Float):Float {
+		if (value < 1) value = 1;
+		else if (value > 300) value = 300;
+		return _bpm = value;
+	}
 }
 
 

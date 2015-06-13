@@ -47,6 +47,15 @@ class Main extends Application {
 		initStepGrid();
 
 		stageResized();
+
+		Browser.window.addEventListener('keydown', function(e:KeyboardEvent) {
+			trace(e.keyCode);
+			switch(e.keyCode) {
+				case 32: //space
+					if (drums.playing) drums.stop();
+					else drums.play();
+			}
+		});
 	}
 
 
@@ -64,10 +73,9 @@ class Main extends Application {
 
 
 	function onDrumsReady() {
-		drums.bpm = 60 + Math.random() * 100;
-		//drums.start(0);
-		//drums.stop();
 		ready = true;
+		drums.bpm = 60 + Math.random() * 80;
+		drums.play(0);
 	}
 
 
