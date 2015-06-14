@@ -2,7 +2,6 @@ package drums;
 import drums.DrumSequencer;
 import drums.Pointer;
 import js.html.Point;
-import motion.easing.Quad;
 import pixi.core.display.Container;
 import pixi.core.display.DisplayObject;
 import pixi.core.graphics.Graphics;
@@ -95,14 +94,13 @@ class SequenceGrid extends Container {
 
 
 	var uiHint:Graphics;
-	var ease = Quad.easeIn;
 	function onPressProgress(target:DisplayObject, p:Float) {
 		// grow...
 		uiHint.x = target.x;
 		uiHint.y = target.y;
 		uiHint.clear();
 		uiHint.beginFill(0x66ffbe, 1);
-		uiHint.drawRect(-cellSize/2, -cellSize/2, ease.calculate(p) * cellSize, cellSize);
+		uiHint.drawRect(-cellSize/2, -cellSize/2, (p*p) * cellSize, cellSize);
 		uiHint.endFill();
 	}
 
