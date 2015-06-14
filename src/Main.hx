@@ -49,7 +49,7 @@ class Main extends Application {
 		stageResized();
 
 		Browser.window.addEventListener('keydown', function(e:KeyboardEvent) {
-			trace(e.keyCode);
+			//trace(e.keyCode);
 			switch(e.keyCode) {
 				case 32: //space
 					if (drums.playing) drums.stop();
@@ -88,7 +88,7 @@ class Main extends Application {
 			if (index == 0 && Math.random() > .8) {
 				drums.tracks[Std.int(Math.random() * 8)].randomise();
 			}
-			if (Math.random() > .9) {
+			if (Math.random() > .95) {
 				drums.tracks[Std.int(Math.random() * 8)].events[Std.int(Math.random() * 16)].active = Math.round(Math.random()) == 1;
 			}
 		}
@@ -104,12 +104,12 @@ class Main extends Application {
 
 		start(Application.AUTO);
 
-		var txt = new Text('Drums', {font : 'normal 24px Raleway', fill : 'white', align : 'lefts'});
-		stage.addChild(txt);
-		txt.position.x = 10;
-		txt.position.y = 10;
+		//var txt = new Text('Drums', {font : 'normal 24px Raleway', fill : 'white', align : 'lefts'});
+		//stage.addChild(txt);
+		//txt.position.x = 10;
+		//txt.position.y = 10;
 
-		stage.interactive = true;
+		//stage.interactive = true;
 	}
 
 
@@ -121,13 +121,13 @@ class Main extends Application {
 
 
 	function initBeatLines() {
-		beatLines = new BeatLines(900, 460);
+		beatLines = new BeatLines(900, 448);
 		stage.addChild(beatLines);
 	}
 
 
 	function initStepGrid() {
-		sequenceGrid = new SequenceGrid(900,460, drums);
+		sequenceGrid = new SequenceGrid(900,448, drums);
 		stage.addChild(sequenceGrid);
 	}
 
@@ -148,7 +148,7 @@ class Main extends Application {
 		beatLines.position.y = 0;
 
 		sequenceGrid.x = beatLines.position.x;
-		sequenceGrid.y = 28+Math.round(h2 - sequenceGrid.displayHeight / 2);
+		sequenceGrid.y = 28 + Math.round(h2 - sequenceGrid.displayHeight / 2);
 
 		//oscilliscope.position.x = beatLines.position.x - 2;
 		//oscilliscope.position.y = 160 + beatLines.position.y + beatLines.displayHeight/2;

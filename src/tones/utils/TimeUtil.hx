@@ -1,7 +1,6 @@
 package tones.utils;
 import hxsignal.Signal;
 import js.Browser;
-import js.html.audio.AudioContext;
 
 /**
  * ...
