@@ -316,6 +316,10 @@ drums_DrumSequencer.prototype = {
 		this.tickIndex = -1;
 		this.timeTrack.removeAllTimedEvents();
 	}
+	,toggleEvent: function(trackIndex,tickIndex) {
+		var e = this.tracks[trackIndex].events[tickIndex];
+		e.active = !e.active;
+	}
 	,loadSamples: function() {
 		var _g2 = this;
 		this.loadCount = 0;
@@ -437,6 +441,8 @@ var drums_Pointer = function() {
 	this.timeDown = 0;
 	this.isDown = false;
 	this.moved = false;
+	this.up = new hxsignal_impl_Signal1();
+	this.down = new hxsignal_impl_Signal1();
 	this.click = new hxsignal_impl_Signal1();
 	this.longPress = new hxsignal_impl_Signal1();
 	this.pressCancel = new hxsignal_impl_Signal1();
@@ -446,39 +452,40 @@ var drums_Pointer = function() {
 drums_Pointer.__name__ = true;
 drums_Pointer.prototype = {
 	watch: function(target) {
-		target.on("mousemove",$bind(this,this.move));
-		target.on("mousedown",$bind(this,this.down));
-		target.on("mouseup",$bind(this,this.up));
-		target.on("touchmove",$bind(this,this.move));
-		target.on("touchstart",$bind(this,this.down));
-		target.on("touchend",$bind(this,this.up));
+		target.on("mousemove",$bind(this,this.onMove));
+		target.on("mousedown",$bind(this,this.onDown));
+		target.on("mouseup",$bind(this,this.onUp));
+		target.on("touchmove",$bind(this,this.onMove));
+		target.on("touchstart",$bind(this,this.onDown));
+		target.on("touchend",$bind(this,this.onUp));
 	}
 	,update: function(t) {
 		var dt = t - this.lastTime;
 		this.lastTime = t;
 		if(this.isDown) {
-			if(dt < 250) this.timeDown += dt;
-			if(this.timeDown - 200 > 600) {
+			this.timeDown += dt;
+			if(this.timeDown - 266 > 500) {
 				this.longPress.emit(this.currentTarget);
 				this.isDown = false;
 				this.timeDown = 0;
-			} else if(this.timeDown > 200) this.pressProgress.emit(this.currentTarget,(this.timeDown - 200) / 600);
+			} else if(this.timeDown > 266) this.pressProgress.emit(this.currentTarget,(this.timeDown - 266) / 500);
 		} else if(this.timeDown > 0) {
-			if(this.timeDown < 200) this.click.emit(this.currentTarget);
+			if(this.timeDown < 266) this.click.emit(this.currentTarget);
 			this.pressCancel.emit(this.currentTarget);
 			this.timeDown = 0;
 		}
 		this.moved = false;
 	}
-	,down: function(e) {
-		this.currentTarget = e.target;
+	,onDown: function(e) {
 		this.isDown = true;
 		this.timeDown = 0;
+		this.down.emit(this.currentTarget = e.target);
 	}
-	,up: function(e) {
+	,onUp: function(e) {
 		this.isDown = false;
+		this.up.emit(this.currentTarget);
 	}
-	,move: function(e) {
+	,onMove: function(e) {
 		this.moved = true;
 	}
 };
@@ -491,10 +498,11 @@ var drums_SequenceGrid = function(displayWidth,displayHeight,drums1) {
 	this.yStep = displayHeight / 8;
 	this.cells = [];
 	this.pointer = new drums_Pointer();
-	this.pointer.click.connect($bind(this,this.onClick));
-	this.pointer.longPress.connect($bind(this,this.onLongPress));
-	this.pointer.pressCancel.connect($bind(this,this.onPressCancel));
-	this.pointer.pressProgress.connect($bind(this,this.onPressProgress));
+	this.cellUI = new drums_CellUI(this.pointer);
+	this.cellUI.editEvent.connect(function(trackIndex,tickIndex) {
+		console.log("edit " + trackIndex + "," + tickIndex);
+	});
+	this.cellUI.toggleEvent.connect($bind(drums1,drums1.toggleEvent));
 	this.createCells();
 };
 drums_SequenceGrid.__name__ = true;
@@ -520,8 +528,7 @@ drums_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 		background.interactiveChildren = false;
 		background.cacheAsBitmap = true;
 		this.addChild(background);
-		this.uiHint = new PIXI.Graphics();
-		this.addChild(this.uiHint);
+		this.addChild(this.cellUI);
 		var _g2 = 0;
 		while(_g2 < 8) {
 			var i1 = _g2++;
@@ -538,30 +545,6 @@ drums_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 				this.cells[i1].push(this.addChild(g));
 			}
 		}
-	}
-	,onClick: function(target) {
-		var values = target.name.split(",");
-		var trackIndex = Std.parseInt(values[0]);
-		var tickIndex = Std.parseInt(values[1]);
-		var event = this.drums.tracks[trackIndex].events[tickIndex];
-		event.active = !event.active;
-	}
-	,onPressProgress: function(target,p) {
-		this.uiHint.x = target.x;
-		this.uiHint.y = target.y;
-		this.uiHint.clear();
-		this.uiHint.beginFill(6750142,1);
-		this.uiHint.drawRect(-26.,-26.,p * p * 52,52);
-		this.uiHint.endFill();
-	}
-	,onPressCancel: function(target) {
-		this.uiHint.clear();
-	}
-	,onLongPress: function(target) {
-		console.log("longPress");
-		var values = target.name.split(",");
-		Std.parseInt(values[0]);
-		Std.parseInt(values[1]);
 	}
 	,drawCell: function(g,size,color) {
 		g.clear();
@@ -607,6 +590,79 @@ drums_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 					}
 				}
 			}
+		}
+		this.cellUI.update();
+	}
+});
+var drums_CellUI = function(pointer) {
+	this.isDown = false;
+	this.fading = false;
+	PIXI.Graphics.call(this);
+	this.toggleEvent = new hxsignal_impl_Signal2();
+	this.editEvent = new hxsignal_impl_Signal2();
+	pointer.click.connect($bind(this,this.onClick));
+	pointer.down.connect($bind(this,this.onDown));
+	pointer.longPress.connect($bind(this,this.onLongPress));
+	pointer.pressCancel.connect($bind(this,this.onPressCancel));
+	pointer.pressProgress.connect($bind(this,this.onPressProgress));
+};
+drums_CellUI.__name__ = true;
+drums_CellUI.__super__ = PIXI.Graphics;
+drums_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
+	onClick: function(target) {
+		var values = target.name.split(",");
+		var trackIndex = Std.parseInt(values[0]);
+		var tickIndex = Std.parseInt(values[1]);
+		this.toggleEvent.emit(trackIndex,tickIndex);
+	}
+	,onDown: function(target) {
+		this.clear();
+		this.x = target.x;
+		this.y = target.y;
+		this.beginFill(2997998,0.25);
+		this.drawRect(-26.,-26.,52,52);
+		this.endFill();
+		this.alpha = 0;
+		this.isDown = true;
+		this.fading = false;
+	}
+	,onPressProgress: function(target,p) {
+		this.x = target.x;
+		this.y = target.y;
+		this.clear();
+		this.alpha = 1;
+		var pp = p * p;
+		var ppp = pp * p;
+		this.beginFill(2998015,.25 + ppp * .25);
+		this.drawRect(-26.,-26.,52,52);
+		this.endFill();
+		this.beginFill(2998015,pp);
+		this.drawRect(-26.,-26.,pp * 52,52);
+		this.endFill();
+	}
+	,onLongPress: function(target) {
+		this.isDown = false;
+		this.beginFill(2998015,1);
+		this.drawRect(-26.,-26.,52,52);
+		this.endFill();
+		var values = target.name.split(",");
+		var trackIndex = Std.parseInt(values[0]);
+		var tickIndex = Std.parseInt(values[1]);
+		this.editEvent.emit(trackIndex,tickIndex);
+	}
+	,onPressCancel: function(target) {
+		this.fading = true;
+		this.isDown = false;
+	}
+	,update: function() {
+		if(this.fading) {
+			if(this.alpha > 0.001) this.alpha *= .75; else {
+				this.clear();
+				this.alpha = 1;
+				this.fading = false;
+			}
+		} else if(this.isDown) {
+			if(this.alpha < 1) this.alpha += .05;
 		}
 	}
 });
