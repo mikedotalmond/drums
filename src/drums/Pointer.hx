@@ -10,13 +10,16 @@ import tones.utils.TimeUtil;
  */
 class Pointer {
 
-	static inline var clickTime:Float = 200;
-	static inline var longPressTime:Float = 600;
+	static inline var clickTime:Float = 266;
+	static inline var longPressTime:Float = 500;
 
-	public var click:Signal<DisplayObject->Void>;
-	public var longPress:Signal<DisplayObject->Void>;
-	public var pressProgress:Signal<DisplayObject->Float->Void>;
-	public var pressCancel:Signal<DisplayObject->Void>;
+	public var up(default, null):Signal<DisplayObject->Void>;
+	public var down(default, null):Signal<DisplayObject->Void>;
+	//public var move(default, null):Signal<DisplayObject->Void>;
+	public var click(default, null):Signal<DisplayObject->Void>;
+	public var longPress(default, null):Signal<DisplayObject->Void>;
+	public var pressProgress(default, null):Signal<DisplayObject->Float->Void>;
+	public var pressCancel(default, null):Signal<DisplayObject->Void>;
 
 	var moved:Bool = false;
 	var isDown:Bool = false;
@@ -24,6 +27,9 @@ class Pointer {
 	var currentTarget:DisplayObject;
 
 	public function new() {
+		up = new Signal<DisplayObject->Void>();
+		down = new Signal<DisplayObject->Void>();
+		//move = new Signal<DisplayObject->Void>();
 		click = new Signal<DisplayObject->Void>();
 		longPress = new Signal<DisplayObject->Void>();
 		pressCancel = new Signal<DisplayObject->Void>();
@@ -32,21 +38,21 @@ class Pointer {
 	}
 
 	public function watch(target:DisplayObject) {
-		target.on('mousemove', move);
-		target.on('mousedown', down);
-		target.on('mouseup', up);
-		target.on('touchmove', move);
-		target.on('touchstart', down);
-		target.on('touchend', up);
+		target.on('mousemove', onMove);
+		target.on('mousedown', onDown);
+		target.on('mouseup', onUp);
+		target.on('touchmove', onMove);
+		target.on('touchstart', onDown);
+		target.on('touchend', onUp);
 	}
 
 	public function unwatch(target:DisplayObject) {
-		target.off('mousemove', move);
-		target.off('mousedown', down);
-		target.off('mouseup', up);
-		target.off('touchmove', move);
-		target.off('touchstart', down);
-		target.off('touchend', up);
+		target.off('mousemove', onMove);
+		target.off('mousedown', onDown);
+		target.off('mouseup', onUp);
+		target.off('touchmove', onMove);
+		target.off('touchstart', onDown);
+		target.off('touchend', onUp);
 	}
 
 	var lastTime:Float = 0;
@@ -56,7 +62,7 @@ class Pointer {
 		lastTime = t;
 
 		if (isDown) {
-			if (dt < 250) timeDown += dt;
+			timeDown += dt;
 			if (timeDown-clickTime > longPressTime) {
 				longPress.emit(currentTarget);
 				isDown = false;
@@ -75,17 +81,19 @@ class Pointer {
 		moved = false;
 	}
 
-	function down(e:Event) {
-		currentTarget = cast e.target;
+	function onDown(e:Event) {
 		isDown = true;
 		timeDown = 0;
+		down.emit(currentTarget = cast e.target);
 	}
 
-	function up(e:Event) {
+	function onUp(e:Event) {
 		isDown = false;
+		up.emit(currentTarget);
 	}
 
-	function move(e:Event) {
+	function onMove(e:Event) {
 		moved = true;
+		//move.emit(currentTarget);
 	}
 }

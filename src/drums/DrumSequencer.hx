@@ -76,6 +76,12 @@ class DrumSequencer {
 	}
 
 
+	public function toggleEvent(trackIndex:Int, tickIndex:Int) {
+		var e = tracks[trackIndex].events[tickIndex];
+		e.active = !e.active;
+	}
+
+
 	function loadSamples() {
 		loadCount = 0;
 		for (i in 0...filenames.length) {

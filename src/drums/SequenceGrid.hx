@@ -1,6 +1,7 @@
 package drums;
 import drums.DrumSequencer;
 import drums.Pointer;
+import hxsignal.Signal;
 import js.html.Point;
 import pixi.core.display.Container;
 import pixi.core.display.DisplayObject;
@@ -13,9 +14,9 @@ import tones.utils.TimeUtil;
  */
 class SequenceGrid extends Container {
 
-	static inline var trackCount = 8;
-	static inline var stepCount = 16;
-	static inline var cellSize = 52;
+	public static inline var trackCount = 8;
+	public static inline var stepCount = 16;
+	public static inline var cellSize = 52;
 
 
 	public var displayWidth:Int;
@@ -26,6 +27,7 @@ class SequenceGrid extends Container {
 	var cells:Array<Array<Graphics>>;
 	var drums:DrumSequencer;
 	var pointer:Pointer;
+	var cellUI:CellUI;
 
 	public function new(displayWidth:Int, displayHeight:Int, drums:DrumSequencer) {
 		super();
@@ -39,10 +41,12 @@ class SequenceGrid extends Container {
 		cells = [];
 
 		pointer = new Pointer();
-		pointer.click.connect(onClick);
-		pointer.longPress.connect(onLongPress);
-		pointer.pressCancel.connect(onPressCancel);
-		pointer.pressProgress.connect(onPressProgress);
+
+		cellUI = new CellUI(pointer);
+		cellUI.editEvent.connect(function(trackIndex, tickIndex) {
+			trace('edit $trackIndex,$tickIndex');
+		});
+		cellUI.toggleEvent.connect(drums.toggleEvent);
 
 		createCells();
 	}
@@ -66,8 +70,7 @@ class SequenceGrid extends Container {
 		background.cacheAsBitmap = true;
 		addChild(background);
 
-		uiHint = new Graphics();
-		addChild(uiHint);
+		addChild(cellUI);
 
 		for (i in 0...trackCount) {
 			cells.push([]);
@@ -81,43 +84,6 @@ class SequenceGrid extends Container {
 				cells[i].push(cast addChild(g));
 			}
 		}
-	}
-
-
-	function onClick(target:DisplayObject) {
-		var values:Array<String> = target.name.split(',');
-		var trackIndex = Std.parseInt(values[0]);
-		var tickIndex = Std.parseInt(values[1]);
-		var event = drums.tracks[trackIndex].events[tickIndex];
-		event.active = !event.active;
-	}
-
-
-	var uiHint:Graphics;
-	function onPressProgress(target:DisplayObject, p:Float) {
-		// grow...
-		uiHint.x = target.x;
-		uiHint.y = target.y;
-		uiHint.clear();
-		uiHint.beginFill(0x66ffbe, 1);
-		uiHint.drawRect(-cellSize/2, -cellSize/2, (p*p) * cellSize, cellSize);
-		uiHint.endFill();
-	}
-
-
-	function onPressCancel(target:DisplayObject) {
-		uiHint.clear();
-	}
-
-
-	function onLongPress(target:DisplayObject) {
-		trace('longPress');
-		//trace(target.name);
-
-		// edit cell - ui popup
-		var values:Array<String> = target.name.split(',');
-		var trackIndex = Std.parseInt(values[0]);
-		var tickIndex = Std.parseInt(values[1]);
 	}
 
 
@@ -167,6 +133,108 @@ class SequenceGrid extends Container {
 						drawCell(cell, targetSize, c);
 					}
 				}
+			}
+		}
+
+		cellUI.update();
+	}
+}
+
+
+class CellUI extends Graphics {
+
+	static inline var cellSize = SequenceGrid.cellSize;
+
+	public var toggleEvent:Signal<Int->Int->Void>;
+	public var editEvent:Signal<Int->Int->Void>;
+
+	var fading:Bool = false;
+	var isDown:Bool = false;
+
+	public function new(pointer:Pointer) {
+		super();
+
+		toggleEvent = new Signal<Int->Int->Void>();
+		editEvent 	= new Signal<Int->Int->Void>();
+
+		pointer.click.connect(onClick);
+		pointer.down.connect(onDown);
+		pointer.longPress.connect(onLongPress);
+		pointer.pressCancel.connect(onPressCancel);
+		pointer.pressProgress.connect(onPressProgress);
+	}
+
+	function onClick(target:DisplayObject) {
+		var values:Array<String> = target.name.split(',');
+		var trackIndex = Std.parseInt(values[0]);
+		var tickIndex = Std.parseInt(values[1]);
+		toggleEvent.emit(trackIndex, tickIndex);
+	}
+
+
+	function onDown(target:DisplayObject) {
+		clear();
+		x = target.x;
+		y = target.y;
+
+		beginFill(0x2DBEEE, 0.25);
+		drawRect(-cellSize/2, -cellSize/2, cellSize, cellSize);
+		endFill();
+
+		alpha = 0;
+		isDown = true;
+		fading = false;
+	}
+
+	function onPressProgress(target:DisplayObject, p:Float) {
+		x = target.x;
+		y = target.y;
+
+		clear();
+		alpha = 1;
+
+		var pp = p * p;
+		var ppp = pp * p;
+
+		beginFill(0x2DBEff, .25+ppp*.25);
+		drawRect(-cellSize/2, -cellSize/2, cellSize, cellSize);
+		endFill();
+
+		beginFill(0x2DBEff, pp);
+		drawRect(-cellSize/2, -cellSize/2, pp * cellSize, cellSize);
+		endFill();
+	}
+
+	function onLongPress(target:DisplayObject) {
+		isDown = false;
+
+		beginFill(0x2DBEff, 1);
+		drawRect(-cellSize/2, -cellSize/2, cellSize, cellSize);
+		endFill();
+
+		var values:Array<String> = target.name.split(',');
+		var trackIndex = Std.parseInt(values[0]);
+		var tickIndex = Std.parseInt(values[1]);
+		editEvent.emit(trackIndex, tickIndex);
+	}
+
+	function onPressCancel(target:DisplayObject) {
+		fading = true;
+		isDown = false;
+	}
+
+	public function update() {
+		if (fading) {
+			if (alpha > 0.001) {
+				alpha *= .75;
+			} else {
+				clear();
+				alpha = 1;
+				fading = false;
+			}
+		} else if (isDown) {
+			if (alpha < 1) {
+				alpha += .05;
 			}
 		}
 	}
