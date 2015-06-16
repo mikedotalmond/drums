@@ -17,38 +17,35 @@ class SequenceGrid extends Container {
 	public static inline var trackCount = 8;
 	public static inline var stepCount = 16;
 	public static inline var cellSize = 52;
+	public static inline var xStep = Main.displayWidth / stepCount;
+	public static inline var yStep = Main.displayHeight / trackCount;
 
-
-	public var displayWidth:Int;
 	public var displayHeight:Int;
 
-	var xStep:Float;
-	var yStep:Float;
 	var cells:Array<Array<Graphics>>;
 	var drums:DrumSequencer;
 	var pointer:Pointer;
 	var cellUI:CellUI;
+	var cellEditIU:drums.CellEditUI;
 
-	public function new(displayWidth:Int, displayHeight:Int, drums:DrumSequencer) {
+	public function new(drums:DrumSequencer) {
 		super();
 
 		this.drums = drums;
-		this.displayWidth = displayWidth;
-		this.displayHeight = displayHeight;
+		this.displayHeight = Main.displayHeight;
 
-		xStep = displayWidth / stepCount;
-		yStep = displayHeight / trackCount;
 		cells = [];
-
 		pointer = new Pointer();
 
+		cellEditIU = new CellEditUI(drums, pointer, Main.displayWidth, Main.displayHeight);
+
 		cellUI = new CellUI(pointer);
-		cellUI.editEvent.connect(function(trackIndex, tickIndex) {
-			trace('edit $trackIndex,$tickIndex');
-		});
+		cellUI.editEvent.connect(cellEditIU.edit);
 		cellUI.toggleEvent.connect(drums.toggleEvent);
 
 		createCells();
+
+		addChild(cellEditIU);
 	}
 
 	function createCells() {
@@ -111,6 +108,8 @@ class SequenceGrid extends Container {
 				drawCell(cell, cellSize, 0xffffff);
 			}
 		}
+
+		cellEditIU.tick(index);
 	}
 
 
@@ -137,6 +136,7 @@ class SequenceGrid extends Container {
 		}
 
 		cellUI.update();
+		cellEditIU.update();
 	}
 }
 
@@ -165,6 +165,8 @@ class CellUI extends Graphics {
 	}
 
 	function onClick(target:DisplayObject) {
+		if (target.parent != parent) return;
+
 		var values:Array<String> = target.name.split(',');
 		var trackIndex = Std.parseInt(values[0]);
 		var tickIndex = Std.parseInt(values[1]);
@@ -173,6 +175,8 @@ class CellUI extends Graphics {
 
 
 	function onDown(target:DisplayObject) {
+		if (target.parent != parent) return;
+
 		clear();
 		x = target.x;
 		y = target.y;
@@ -187,6 +191,8 @@ class CellUI extends Graphics {
 	}
 
 	function onPressProgress(target:DisplayObject, p:Float) {
+		if (target.parent != parent) return;
+
 		x = target.x;
 		y = target.y;
 
@@ -206,6 +212,8 @@ class CellUI extends Graphics {
 	}
 
 	function onLongPress(target:DisplayObject) {
+		if (target.parent != parent) return;
+
 		isDown = false;
 
 		beginFill(0x2DBEff, 1);
@@ -219,9 +227,11 @@ class CellUI extends Graphics {
 	}
 
 	function onPressCancel(target:DisplayObject) {
+		if (target.parent != parent) return;
 		fading = true;
 		isDown = false;
 	}
+
 
 	public function update() {
 		if (fading) {

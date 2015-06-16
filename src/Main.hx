@@ -4,6 +4,7 @@ import drums.BeatLines;
 import drums.DrumSequencer;
 import drums.Oscilliscope;
 import drums.SequenceGrid;
+import input.KeyCodes;
 import js.Browser;
 import js.html.*;
 import js.html.audio.*;
@@ -22,6 +23,9 @@ import util.*;
 
 
 class Main extends Application {
+
+	public static inline var displayWidth = 900;
+	public static inline var displayHeight = 448;
 
 	var graphics:Graphics;
 
@@ -51,7 +55,7 @@ class Main extends Application {
 		Browser.window.addEventListener('keydown', function(e:KeyboardEvent) {
 			//trace(e.keyCode);
 			switch(e.keyCode) {
-				case 32: //space
+				case KeyCodes.SPACE:
 					if (drums.playing) drums.stop();
 					else drums.play();
 			}
@@ -112,7 +116,6 @@ class Main extends Application {
 		//stage.interactive = true;
 	}
 
-
 	function initOscilliscope() {
 		oscilliscope = new Oscilliscope(audioContext, 568, 120);
 		stage.addChild(oscilliscope);
@@ -121,13 +124,13 @@ class Main extends Application {
 
 
 	function initBeatLines() {
-		beatLines = new BeatLines(900, 448);
+		beatLines = new BeatLines(displayWidth, displayHeight);
 		stage.addChild(beatLines);
 	}
 
 
 	function initStepGrid() {
-		sequenceGrid = new SequenceGrid(900,448, drums);
+		sequenceGrid = new SequenceGrid(drums);
 		stage.addChild(sequenceGrid);
 	}
 
@@ -140,15 +143,16 @@ class Main extends Application {
 
 
 	function stageResized() {
-		var w2 = (width / 2) + 28;
+		var w2 = (width / 2);
 		var h2 = (height / 2);// - 40;
 
+		sequenceGrid.x = Math.round(w2 - beatLines.displayWidth / 2) + SequenceGrid.cellSize / 2;
+		sequenceGrid.y = Math.round(h2 - sequenceGrid.displayHeight / 2) + SequenceGrid.cellSize / 2;
+
 		beatLines.displayHeight = Math.round(height);
-		beatLines.position.x = Math.round(w2 - beatLines.displayWidth / 2);
+		beatLines.position.x = sequenceGrid.x;
 		beatLines.position.y = 0;
 
-		sequenceGrid.x = beatLines.position.x;
-		sequenceGrid.y = 28 + Math.round(h2 - sequenceGrid.displayHeight / 2);
 
 		//oscilliscope.position.x = beatLines.position.x - 2;
 		//oscilliscope.position.y = 160 + beatLines.position.y + beatLines.displayHeight/2;
