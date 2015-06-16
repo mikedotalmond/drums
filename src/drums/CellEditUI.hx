@@ -21,6 +21,8 @@ class CellEditUI extends Container {
 
 	var trackIndex:Int;
 	var tickIndex:Int;
+	var tickPulse = .0;
+	var event:TrackEvent;
 
 	public function new(drums:DrumSequencer, pointer:Pointer,displayWidth:Int, displayHeight:Int) {
 		super();
@@ -49,6 +51,7 @@ class CellEditUI extends Container {
 		closing = false;
 
 		bgSize = 0;
+		event = drums.tracks[trackIndex].events[tickIndex];
 		this.trackIndex = trackIndex;
 		this.tickIndex = tickIndex;
 	}
@@ -60,14 +63,11 @@ class CellEditUI extends Container {
 	}
 
 	public function tick(index:Int) {
-		if (index == tickIndex) {
-			// pulse
-			//pivot.x = displayWidth / 2;
-			//pivot.y = displayHeight / 2;
-			ticked = 1.01;
+		if (index == tickIndex && event.active) {
+			tickPulse = 1.01;
 		}
 	}
-	var ticked = .0;
+
 	public function update() {
 		if (!visible) return;
 
@@ -89,17 +89,17 @@ class CellEditUI extends Container {
 		} else {
 
 			// pulse with ticks for this cell
-			if (ticked > 1) {
-				ticked *= .998;
-				if (ticked < 1) ticked = 1;
+			if (tickPulse > 1) {
+				tickPulse *= .998;
+				if (tickPulse < 1) tickPulse = 1;
 
-				var dx = Main.displayWidth - Main.displayWidth * ticked;
-				var dy = Main.displayHeight - Main.displayHeight * ticked;
+				var dx = Main.displayWidth - Main.displayWidth * tickPulse;
+				var dy = Main.displayHeight - Main.displayHeight * tickPulse;
 
 				bg.position.set(dx, dy);
 				bg.clear();
 				bg.beginFill(0x2DBEff);
-				bg.drawRect( -SequenceGrid.xStep / 2, -SequenceGrid.yStep / 2, Main.displayWidth * ticked - dx, Main.displayHeight * ticked - dy);
+				bg.drawRect( -SequenceGrid.xStep / 2, -SequenceGrid.yStep / 2, Main.displayWidth * tickPulse - dx, Main.displayHeight * tickPulse - dy);
 				bg.endFill();
 			}
 		}
