@@ -232,7 +232,7 @@ class AudioBase {
 
 	inline function get_attack():Float return _attack;
 	function set_attack(value:Float):Float {
-		if (value < 0.001) value = 0.001;
+		if (value < 0.001) value = 0;
 		return _attack = value;
 	}
 

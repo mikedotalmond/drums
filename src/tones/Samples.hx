@@ -18,6 +18,9 @@ class Samples extends AudioBase {
 
 	public var buffer:AudioBuffer = null;
 	public var playbackRate:Float;
+	public var offset:Float;
+	public var duration:Float;
+
 
 	/**
 	 * @param	audioContext 	- optional. Pass an exsiting audioContext here to share it.
@@ -26,6 +29,8 @@ class Samples extends AudioBase {
 	public function new(audioContext:AudioContext = null, ?destinationNode:AudioNode = null) {
 		super(audioContext, destinationNode);
 		playbackRate = 1.0;
+		offset = 0;
+		duration = 0;
 	}
 
 
@@ -53,17 +58,24 @@ class Samples extends AudioBase {
 		var triggerTime = now + delayBy;
 		var releaseTime = triggerTime + attack;
 
-		envelope.gain.value = 0;
+		if (attack > 0) {
+			envelope.gain.value = 0;
+			envelope.gain.setTargetAtTime(volume, triggerTime, TimeUtil.getTimeConstant(attack));
+		} else {
+			envelope.gain.value = volume;
+		}
+
 		envelope.connect(destination);
-		// attack
-		envelope.gain.setTargetAtTime(volume, triggerTime, TimeUtil.getTimeConstant(attack));
 
 		var src = context.createBufferSource();
+
 		src.buffer = this.buffer;
 		src.playbackRate.value = playbackRate;
 
+		if (duration <= 0) duration = src.buffer.duration;
+
 		src.connect(envelope);
-		src.start(triggerTime);
+		src.start(triggerTime, offset, duration);
 
 		activeItems.set(id, { id:id, src:src, volume:volume, env:envelope, attack:attack, release:release, triggerTime:triggerTime } );
 

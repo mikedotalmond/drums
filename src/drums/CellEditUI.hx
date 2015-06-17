@@ -1,6 +1,7 @@
 package drums;
 import drums.DrumSequencer;
 import drums.DrumSequencer.TrackEvent;
+import hxsignal.Signal;
 import pixi.core.display.Container;
 import pixi.core.graphics.Graphics;
 
@@ -21,12 +22,16 @@ class CellEditUI extends Container {
 
 	var trackIndex:Int;
 	var tickIndex:Int;
-	var tickPulse = .0;
+	var tickPulse:Float = 1.0;
 	var event:TrackEvent;
+
+	public var closed(default, null):Signal<Void->Void>;
 
 	public function new(drums:DrumSequencer, pointer:Pointer,displayWidth:Int, displayHeight:Int) {
 		super();
 		visible = false;
+
+		closed = new Signal<Void->Void>();
 
 		this.drums = drums;
 		this.displayWidth = displayWidth;
@@ -60,11 +65,12 @@ class CellEditUI extends Container {
 	public function close() {
 		closing = true;
 		launching = false;
+		closed.emit();
 	}
 
 	public function tick(index:Int) {
 		if (index == tickIndex && event.active) {
-			tickPulse = 1.01;
+			tickPulse = 1.007;
 		}
 	}
 

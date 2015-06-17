@@ -134,8 +134,11 @@ class DrumSequencer {
 			if (event.active) {
 				var s = track.source;
 				s.volume = event.volume;
-				s.playbackRate = event.rate;
+				s.attack = event.attack;
 				s.release = event.release;
+				s.offset = event.offset;
+				s.duration = event.duration;
+				s.playbackRate = event.rate;
 				track.pan = event.pan;
 				s.playSample(null, time - context.currentTime);
 			}
@@ -179,9 +182,9 @@ class Track {
 		source.attack = 0;
 		source.buffer = buffer;
 
-		events = [for (i in 0...stepCount) { active:false, volume:1, pan:0, rate:1, release:buffer.duration } ];
-
-		//randomise();
+		events = [for (i in 0...stepCount)
+			{ active:false, volume:1, pan:0, rate:1, attack:0, release:buffer.duration, offset:0, duration:buffer.duration }
+		];
 	}
 
 
@@ -233,5 +236,8 @@ typedef TrackEvent = {
 	var volume:Float;
 	var pan:Float;
 	var rate:Float;
+	var attack:Float;
 	var release:Float;
+	var offset:Float;
+	var duration:Float;
 }
