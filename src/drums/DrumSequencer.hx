@@ -24,7 +24,8 @@ import js.html.XMLHttpRequest;
  */
 class DrumSequencer {
 
-	static var filenames:Array<String> = ['Kick01', 'Snare01', 'Snare01', 'Rim01', 'Rim02', 'Clave01', 'Clave02', 'Cowbell'];
+	static var filenames:Array<String> = ['Kick01', 'Snare01', 'Snare02', 'Rim01', 'Rim02', 'Clave01', 'Clave02', 'Cowbell'];
+
 	static inline var tickLength:Float = 1/4;
 	static inline var stepCount:Int = 16;
 

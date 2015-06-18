@@ -19,7 +19,7 @@ class WebFontEmbed {
 	static public function load():Void {
 
 		var config = {
-			google: { families: ['Raleway:400'] },
+			google: { families: ['Ubuntu:300,400,700'] },
 			active: loaded
 		};
 
