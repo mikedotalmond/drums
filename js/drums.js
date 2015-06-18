@@ -200,13 +200,19 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 		this.onUpdate = $bind(this,this.tick);
 		this.onResize = $bind(this,this.stageResized);
 		this.start("auto");
+		var floatMapping = new parameter_MapFloat(.0,3.141);
+		new parameter_FloatParameter("Parameter<Float> test",floatMapping);
+		var txt = new PIXI.Text("drums",{ font : "300 12px Ubuntu", fill : "white", align : "left"});
+		this.stage.addChild(txt);
+		txt.position.x = 10;
+		txt.position.y = 10;
 	}
 	,initBeatLines: function() {
 		this.beatLines = new drums_BeatLines(900,448);
 		this.stage.addChild(this.beatLines);
 	}
 	,initStepGrid: function() {
-		this.sequenceGrid = new drums_SequenceGrid(900,448,this.drums);
+		this.sequenceGrid = new drums_SequenceGrid(this.drums);
 		this.stage.addChild(this.sequenceGrid);
 	}
 	,tick: function(dt) {
@@ -214,13 +220,13 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 		this.sequenceGrid.update(dt);
 	}
 	,stageResized: function() {
-		var w2 = this.width / 2 + 28;
+		var w2 = this.width / 2;
 		var h2 = this.height / 2;
+		this.sequenceGrid.x = Math.round(w2 - this.beatLines.displayWidth / 2) + 26.;
+		this.sequenceGrid.y = Math.round(h2 - this.sequenceGrid.displayHeight / 2) + 26.;
 		this.beatLines.displayHeight = Math.round(this.height);
-		this.beatLines.position.x = Math.round(w2 - this.beatLines.displayWidth / 2);
+		this.beatLines.position.x = this.sequenceGrid.x;
 		this.beatLines.position.y = 0;
-		this.sequenceGrid.x = this.beatLines.position.x;
-		this.sequenceGrid.y = 28 + Math.round(h2 - this.sequenceGrid.displayHeight / 2);
 	}
 });
 Math.__name__ = true;
@@ -288,6 +294,98 @@ drums_BeatLines.prototype = $extend(PIXI.Container.prototype,{
 	}
 	,lineWidthForStep: function(index) {
 		return index % 4 == 0?6:index % 2 == 0?3:1;
+	}
+});
+var drums_CellEditUI = function(drums1,pointer,displayWidth,displayHeight) {
+	this.tickPulse = 1.0;
+	this.closing = false;
+	this.launching = false;
+	this.bgSize = 0;
+	var _g = this;
+	PIXI.Container.call(this);
+	this.visible = false;
+	this.closed = new hxsignal_impl_Signal0();
+	this.drums = drums1;
+	this.displayWidth = displayWidth;
+	this.displayHeight = displayHeight;
+	this.bg = new PIXI.Graphics();
+	this.bg.interactive = true;
+	pointer.watch(this.bg);
+	pointer.click.connect(function(target) {
+		if(target.parent == _g) _g.close();
+	});
+	this.addChild(this.bg);
+};
+drums_CellEditUI.__name__ = true;
+drums_CellEditUI.__super__ = PIXI.Container;
+drums_CellEditUI.prototype = $extend(PIXI.Container.prototype,{
+	edit: function(trackIndex,tickIndex) {
+		this.visible = this.launching = true;
+		this.closing = false;
+		this.bgSize = 0;
+		this.event = this.drums.tracks[trackIndex].events[tickIndex];
+		this.trackIndex = trackIndex;
+		this.tickIndex = tickIndex;
+	}
+	,close: function() {
+		this.closing = true;
+		this.launching = false;
+		this.closed.emit();
+	}
+	,tick: function(index) {
+		if(index == this.tickIndex && this.event.active) this.tickPulse = 1.007;
+	}
+	,update: function() {
+		if(!this.visible) return;
+		if(this.launching || this.closing) {
+			this.bgSize += this.launching?.06:-.06;
+			if(this.bgSize >= 1) {
+				this.bgSize = 1;
+				this.launching = false;
+			} else if(this.bgSize <= 0) {
+				this.bgSize = 0;
+				this.closing = false;
+				this.visible = false;
+			}
+			this.drawBg(this.bgSize);
+		} else if(this.tickPulse > 1) {
+			this.tickPulse *= .998;
+			if(this.tickPulse < 1) this.tickPulse = 1;
+			var dx = 900 - 900 * this.tickPulse;
+			var dy = 448 - 448 * this.tickPulse;
+			this.bg.position.set(dx,dy);
+			this.bg.clear();
+			this.bg.beginFill(2998015);
+			this.bg.drawRect(-28.125,-28.,900 * this.tickPulse - dx,448 * this.tickPulse - dy);
+			this.bg.endFill();
+		}
+	}
+	,drawBg: function(size) {
+		this.bg.position.set(0,0);
+		this.bg.clear();
+		if(size == 1) {
+			this.bg.beginFill(2998015);
+			this.bg.drawRect(-28.125,-28.,900,448);
+			this.bg.endFill();
+			return;
+		}
+		var size1 = size * size;
+		var startX = this.tickIndex * 56.25;
+		var startY = this.trackIndex * 56.;
+		var right;
+		var left;
+		var up;
+		var down;
+		right = (this.displayWidth - startX - 56.25 + 28.125) * size1;
+		down = (this.displayHeight - startY - 56. + 28.) * size1;
+		left = (-startX * size1 - 56.25 + 28.125) * size1;
+		up = (-startY * size1 - 56. + 28.) * size1;
+		this.bg.beginFill(2998015,size1);
+		this.bg.drawRect(startX,startY,right,down);
+		this.bg.drawRect(startX,startY,left,up);
+		this.bg.drawRect(startX,startY,right,up);
+		this.bg.drawRect(startX,startY,left,down);
+		this.bg.endFill();
 	}
 });
 var drums_DrumSequencer = function(audioContext,destination) {
@@ -375,8 +473,11 @@ drums_DrumSequencer.prototype = {
 			if(event.active) {
 				var s = track.source;
 				s.set_volume(event.volume);
-				s.playbackRate = event.rate;
+				s.set_attack(event.attack);
 				s.set_release(event.release);
+				s.offset = event.offset;
+				s.duration = event.duration;
+				s.playbackRate = event.rate;
 				track.set_pan(event.pan);
 				s.playSample(null,time - this.context.currentTime);
 			}
@@ -400,7 +501,7 @@ var drums_Track = function(buffer,context,destination) {
 	var _g1 = 0;
 	while(_g1 < 16) {
 		_g1++;
-		_g.push({ active : false, volume : 1, pan : 0, rate : 1, release : buffer.duration});
+		_g.push({ active : false, volume : 1, pan : 0, rate : 1, attack : 0, release : buffer.duration, offset : 0, duration : buffer.duration});
 	}
 	tmp = _g;
 	this.events = tmp;
@@ -489,21 +590,22 @@ drums_Pointer.prototype = {
 		this.moved = true;
 	}
 };
-var drums_SequenceGrid = function(displayWidth,displayHeight,drums1) {
+var drums_SequenceGrid = function(drums1) {
+	var _g = this;
 	PIXI.Container.call(this);
 	this.drums = drums1;
-	this.displayWidth = displayWidth;
-	this.displayHeight = displayHeight;
-	this.xStep = displayWidth / 16;
-	this.yStep = displayHeight / 8;
+	this.displayHeight = 448;
 	this.cells = [];
 	this.pointer = new drums_Pointer();
-	this.cellUI = new drums_CellUI(this.pointer);
-	this.cellUI.editEvent.connect(function(trackIndex,tickIndex) {
-		console.log("edit " + trackIndex + "," + tickIndex);
+	this.cellEditIU = new drums_CellEditUI(drums1,this.pointer,900,448);
+	this.cellEditIU.closed.connect(function() {
+		_g.cellUI.clear();
 	});
+	this.cellUI = new drums_CellUI(this.pointer);
+	this.cellUI.editEvent.connect(($_=this.cellEditIU,$bind($_,$_.edit)));
 	this.cellUI.toggleEvent.connect($bind(drums1,drums1.toggleEvent));
 	this.createCells();
+	this.addChild(this.cellEditIU);
 };
 drums_SequenceGrid.__name__ = true;
 drums_SequenceGrid.__super__ = PIXI.Container;
@@ -518,8 +620,8 @@ drums_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 			while(_g1 < 16) {
 				var j = _g1++;
 				g = new PIXI.Graphics();
-				g.position.x = Math.round(j * this.xStep);
-				g.position.y = Math.round(i * this.yStep);
+				g.position.x = Math.round(j * 56.25);
+				g.position.y = Math.round(i * 56.);
 				this.drawCell(g,52,0);
 				background.addChild(g);
 			}
@@ -537,8 +639,8 @@ drums_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 			while(_g11 < 16) {
 				var j1 = _g11++;
 				g = new PIXI.Graphics();
-				g.position.x = Math.round(j1 * this.xStep);
-				g.position.y = Math.round(i1 * this.yStep);
+				g.position.x = Math.round(j1 * 56.25);
+				g.position.y = Math.round(i1 * 56.);
 				g.interactive = true;
 				g.name = "" + i1 + "," + j1;
 				this.pointer.watch(g);
@@ -567,6 +669,7 @@ drums_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 				this.drawCell(cell,52,16777215);
 			}
 		}
+		this.cellEditIU.tick(index);
 	}
 	,update: function(dt) {
 		var c;
@@ -592,6 +695,7 @@ drums_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 			}
 		}
 		this.cellUI.update();
+		this.cellEditIU.update();
 	}
 });
 var drums_CellUI = function(pointer) {
@@ -610,12 +714,14 @@ drums_CellUI.__name__ = true;
 drums_CellUI.__super__ = PIXI.Graphics;
 drums_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
 	onClick: function(target) {
+		if(target.parent != this.parent) return;
 		var values = target.name.split(",");
 		var trackIndex = Std.parseInt(values[0]);
 		var tickIndex = Std.parseInt(values[1]);
 		this.toggleEvent.emit(trackIndex,tickIndex);
 	}
 	,onDown: function(target) {
+		if(target.parent != this.parent) return;
 		this.clear();
 		this.x = target.x;
 		this.y = target.y;
@@ -627,6 +733,7 @@ drums_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
 		this.fading = false;
 	}
 	,onPressProgress: function(target,p) {
+		if(target.parent != this.parent) return;
 		this.x = target.x;
 		this.y = target.y;
 		this.clear();
@@ -641,6 +748,7 @@ drums_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
 		this.endFill();
 	}
 	,onLongPress: function(target) {
+		if(target.parent != this.parent) return;
 		this.isDown = false;
 		this.beginFill(2998015,1);
 		this.drawRect(-26.,-26.,52,52);
@@ -651,6 +759,7 @@ drums_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
 		this.editEvent.emit(trackIndex,tickIndex);
 	}
 	,onPressCancel: function(target) {
+		if(target.parent != this.parent) return;
 		this.fading = true;
 		this.isDown = false;
 	}
@@ -870,6 +979,7 @@ var hxsignal_impl_Connection = function(signal,slot,times) {
 	this.times = times;
 	this.blocked = false;
 	this.connected = true;
+	this.calledTimes = 0;
 };
 hxsignal_impl_Connection.__name__ = true;
 var hxsignal_impl_SignalBase = function() {
@@ -1102,6 +1212,60 @@ js_Boot.__string_rec = function(o,s) {
 		return String(o);
 	}
 };
+var parameter_IMapping = function() { };
+parameter_IMapping.__name__ = true;
+var parameter_MapFloat = function(min,max) {
+	if(max == null) max = 1;
+	if(min == null) min = 0;
+	this.min = min;
+	this.max = max;
+};
+parameter_MapFloat.__name__ = true;
+parameter_MapFloat.__interfaces__ = [parameter_IMapping];
+parameter_MapFloat.prototype = {
+	map: function(normalisedValue) {
+		return this.min + normalisedValue * (this.max - this.min);
+	}
+	,mapInverse: function(value) {
+		return (value - this.min) / (this.max - this.min);
+	}
+};
+var parameter_ParameterBase = function(name,mapping) {
+	this.name = name;
+	this.mapping = mapping;
+	this.change = new hxsignal_impl_Signal1();
+	this.setDefault(mapping.min);
+};
+parameter_ParameterBase.__name__ = true;
+parameter_ParameterBase.prototype = {
+	setDefault: function(value,normalised) {
+		if(normalised == null) normalised = false;
+		var normValue;
+		if(normalised) {
+			normValue = value;
+			value = this.mapping.map(normValue);
+		} else normValue = this.mapping.mapInverse(value);
+		this.normalisedDefaultValue = normValue;
+		this.defaultValue = value;
+		this.setValue(normValue,true);
+	}
+	,setValue: function(value,normalised,forced) {
+		if(forced == null) forced = false;
+		if(normalised == null) normalised = false;
+		var normValue = normalised?value:this.mapping.mapInverse(value);
+		if(forced || normValue != this.normalisedValue) {
+			this.normalisedValue = normValue;
+			this.change.emit(this);
+		}
+	}
+};
+var parameter_FloatParameter = function(name,mapping) {
+	parameter_ParameterBase.call(this,name,mapping);
+};
+parameter_FloatParameter.__name__ = true;
+parameter_FloatParameter.__super__ = parameter_ParameterBase;
+parameter_FloatParameter.prototype = $extend(parameter_ParameterBase.prototype,{
+});
 var tones_AudioBase = function(audioContext,destinationNode) {
 	this.lastTime = .0;
 	this.ID = 0;
@@ -1166,7 +1330,7 @@ tones_AudioBase.prototype = {
 		this.timedEvents = [];
 	}
 	,set_attack: function(value) {
-		if(value < 0.001) value = 0.001;
+		if(value < 0.001) value = 0;
 		return this._attack = value;
 	}
 	,set_release: function(value) {
@@ -1236,6 +1400,8 @@ var tones_Samples = function(audioContext,destinationNode) {
 	this.buffer = null;
 	tones_AudioBase.call(this,audioContext,destinationNode);
 	this.playbackRate = 1.0;
+	this.offset = 0;
+	this.duration = 0;
 };
 tones_Samples.__name__ = true;
 tones_Samples.__super__ = tones_AudioBase;
@@ -1253,14 +1419,17 @@ tones_Samples.prototype = $extend(tones_AudioBase.prototype,{
 		var envelope = this.context.createGain();
 		var triggerTime = this.context.currentTime + delayBy;
 		var releaseTime = triggerTime + this._attack;
-		envelope.gain.value = 0;
+		if(this._attack > 0) {
+			envelope.gain.value = 0;
+			envelope.gain.setTargetAtTime(this._volume,triggerTime,Math.log(this._attack + 1.0) / 4.605170185988092);
+		} else envelope.gain.value = this._volume;
 		envelope.connect(this.destination);
-		envelope.gain.setTargetAtTime(this._volume,triggerTime,Math.log(this._attack + 1.0) / 4.605170185988092);
 		var src = this.context.createBufferSource();
 		src.buffer = this.buffer;
 		src.playbackRate.value = this.playbackRate;
+		if(this.duration <= 0) this.duration = src.buffer.duration;
 		src.connect(envelope);
-		src.start(triggerTime);
+		src.start(triggerTime,this.offset,this.duration);
 		this.activeItems.h[id] = { id : id, src : src, volume : this._volume, env : envelope, attack : this._attack, release : this._release, triggerTime : triggerTime};
 		if(delayBy == 0) this.triggerItemBegin(id,triggerTime); else this.delayedBegin.push({ id : id, time : triggerTime});
 		if(autoRelease) this.doRelease(id,releaseTime);
@@ -1281,7 +1450,7 @@ tones_utils_TimeUtil.onFrame = function(_) {
 var util_WebFontEmbed = function() { };
 util_WebFontEmbed.__name__ = true;
 util_WebFontEmbed.load = function() {
-	var config = { google : { families : ["Raleway:400"]}, active : util_WebFontEmbed.loaded};
+	var config = { google : { families : ["Ubuntu:300,400,700"]}, active : util_WebFontEmbed.loaded};
 	var o = window;
 	o.WebFontConfig = config;
 	var tmp;
@@ -1308,7 +1477,7 @@ if(node != null) {
 }
 tones_utils_TimeUtil._frameTick = new hxsignal_impl_Signal1();
 window.requestAnimationFrame(tones_utils_TimeUtil.onFrame);
-drums_DrumSequencer.filenames = ["Kick01","Snare01","Snare01","Rim01","Rim02","Clave01","Clave02","Cowbell"];
+drums_DrumSequencer.filenames = ["Kick01","Snare01","Snare02","Rim01","Rim02","Clave01","Clave02","Cowbell"];
 haxe_ds_ObjectMap.count = 0;
 Main.main();
 })(typeof console != "undefined" ? console : {log:function(){}});
