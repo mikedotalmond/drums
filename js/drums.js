@@ -200,8 +200,6 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 		this.onUpdate = $bind(this,this.tick);
 		this.onResize = $bind(this,this.stageResized);
 		this.start("auto");
-		var floatMapping = new parameter_MapFloat(.0,3.141);
-		new parameter_FloatParameter("Parameter<Float> test",floatMapping);
 		var txt = new PIXI.Text("drums",{ font : "300 12px Ubuntu", fill : "white", align : "left"});
 		this.stage.addChild(txt);
 		txt.position.x = 10;
@@ -1212,60 +1210,6 @@ js_Boot.__string_rec = function(o,s) {
 		return String(o);
 	}
 };
-var parameter_IMapping = function() { };
-parameter_IMapping.__name__ = true;
-var parameter_MapFloat = function(min,max) {
-	if(max == null) max = 1;
-	if(min == null) min = 0;
-	this.min = min;
-	this.max = max;
-};
-parameter_MapFloat.__name__ = true;
-parameter_MapFloat.__interfaces__ = [parameter_IMapping];
-parameter_MapFloat.prototype = {
-	map: function(normalisedValue) {
-		return this.min + normalisedValue * (this.max - this.min);
-	}
-	,mapInverse: function(value) {
-		return (value - this.min) / (this.max - this.min);
-	}
-};
-var parameter_ParameterBase = function(name,mapping) {
-	this.name = name;
-	this.mapping = mapping;
-	this.change = new hxsignal_impl_Signal1();
-	this.setDefault(mapping.min);
-};
-parameter_ParameterBase.__name__ = true;
-parameter_ParameterBase.prototype = {
-	setDefault: function(value,normalised) {
-		if(normalised == null) normalised = false;
-		var normValue;
-		if(normalised) {
-			normValue = value;
-			value = this.mapping.map(normValue);
-		} else normValue = this.mapping.mapInverse(value);
-		this.normalisedDefaultValue = normValue;
-		this.defaultValue = value;
-		this.setValue(normValue,true);
-	}
-	,setValue: function(value,normalised,forced) {
-		if(forced == null) forced = false;
-		if(normalised == null) normalised = false;
-		var normValue = normalised?value:this.mapping.mapInverse(value);
-		if(forced || normValue != this.normalisedValue) {
-			this.normalisedValue = normValue;
-			this.change.emit(this);
-		}
-	}
-};
-var parameter_FloatParameter = function(name,mapping) {
-	parameter_ParameterBase.call(this,name,mapping);
-};
-parameter_FloatParameter.__name__ = true;
-parameter_FloatParameter.__super__ = parameter_ParameterBase;
-parameter_FloatParameter.prototype = $extend(parameter_ParameterBase.prototype,{
-});
 var tones_AudioBase = function(audioContext,destinationNode) {
 	this.lastTime = .0;
 	this.ID = 0;
