@@ -7,7 +7,10 @@
 import hxsignal.Signal;
 import parameter.Mapping;
 
-
+/**
+ * T - Float,Int,Bool
+ * I - InterpolationNone,InterpolationLinear,InterpolationExponential
+ */
 class ParameterBase<T,I> {
 
 	public var name(default, null):String;
@@ -104,15 +107,15 @@ abstract Parameter<T,I>(ParameterBase<T,I>) {
 
     public function new(name:String, min:T, max:T);
 
-	@:to static inline function toBoolParameter<T,I>(t:ParameterBase<Bool,Interpolation>, name:String, min:Bool, max:Bool):BoolParameter {
+	@:to static inline function toBoolParameter<T,I>(t:ParameterBase<Bool,InterpolationNone>, name:String, min:Bool, max:Bool):BoolParameter {
 		return new BoolParameter(name, getBool(min, max));
     }
 
     @:to static inline function toIntParameter<T,I>(t:ParameterBase<Int,InterpolationLinear>, name:String, min:Int, max:Int):IntParameter {
-		return new IntParameter(name, getIntExponential(min, max));
+		return new IntParameter(name, getInt(min, max));
     }
 	@:to static inline function toIntParameterExpo<T,I>(t:ParameterBase<Int,InterpolationExponential>, name:String, min:Int, max:Int):IntParameter {
-		return new IntParameter(name, getInt(min, max));
+		return new IntParameter(name, getIntExponential(min, max));
     }
 
 	@:to static inline function toFloatParameter<T,I>(t:ParameterBase<Float,InterpolationLinear>, name:String, min:Float, max:Float):FloatParameter {
@@ -122,7 +125,7 @@ abstract Parameter<T,I>(ParameterBase<T,I>) {
 		return new FloatParameter(name, getFloatExponential(min,max));
     }
 
-	static function getBool(min,max) return cast new Mapping<Bool,Interpolation>(min, max);
+	static function getBool(min,max) return cast new Mapping<Bool,InterpolationNone>(min, max);
 
 	static function getFloat(min,max) return cast new Mapping<Float,InterpolationLinear>(min, max);
 	static function getFloatExponential(min,max) return cast new Mapping<Float,InterpolationExponential>(min, max);

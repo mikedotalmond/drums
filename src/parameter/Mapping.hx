@@ -6,6 +6,7 @@
  */
 
 interface Interpolation { }
+interface InterpolationNone extends Interpolation { }
 interface InterpolationLinear extends Interpolation { }
 interface InterpolationExponential extends Interpolation { }
 
@@ -43,7 +44,7 @@ abstract Mapping<T,I>(IMapping<T,I>) {
 
 	public function new(minValue:T, maxValue:T);
 
-	@:to static inline function toMapBool<T,I>(t:IMapping<Bool, Interpolation>, minValue:Bool, maxValue:Bool):MapBool {
+	@:to static inline function toMapBool<T,I>(t:IMapping<Bool, InterpolationNone>, minValue:Bool, maxValue:Bool):MapBool {
 		return new MapBool(minValue, maxValue);
 	}
 	@:to static inline function toMapIntLinear<T,I>(t:IMapping<Int, InterpolationLinear>, minValue:Int, maxValue:Int):MapIntLinear {
@@ -61,7 +62,7 @@ abstract Mapping<T,I>(IMapping<T,I>) {
 }
 
 
-class MapBool implements IMapping<Bool, Interpolation> {
+class MapBool implements IMapping<Bool, InterpolationNone> {
 
 	public var min(default, null):Bool;
 	public var max(default, null):Bool;
