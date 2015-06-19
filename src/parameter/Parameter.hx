@@ -4,7 +4,6 @@
  * @author Mike Almond
  */
 
-import haxe.macro.Expr.ExprOf;
 import hxsignal.Signal;
 import parameter.Mapping;
 
