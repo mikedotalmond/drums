@@ -7,7 +7,7 @@
 import hxsignal.Signal;
 import parameter.Mapping;
 
-/**/
+
 class ParameterBase<T,I> {
 
 	public var name(default, null):String;
@@ -20,6 +20,7 @@ class ParameterBase<T,I> {
 	public var mapping(default, null):Mapping<T,I>;
 	public var change(default, null):Signal<Parameter<T,I>->Void>;
 
+	@:allow(parameter.Parameter)
 	private function new(name:String, mapping:Mapping<T,I>) {
 
 		this.name = name;
@@ -69,10 +70,6 @@ class ParameterBase<T,I> {
 		return mapping.map(normalisedValue);
 	}
 
-	public function invert() {
-		throw 'Error - not implemented';
-	}
-
 	public function addObservers(observers:Array<Parameter<T,I>->Void>, triggerImmediately = false, once = false) {
 		for (observer in observers) {
 			addObserver(observer, triggerImmediately, once);
@@ -97,41 +94,12 @@ class ParameterBase<T,I> {
 	}
 }
 
-
-class BoolParameter extends ParameterBase<Bool,Interpolation> {
-	public function new(name, mapping:Mapping<Bool,Interpolation>) {
-		super(name, mapping);
-	}
-
-	override public function invert() {
-		setValue(!getValue());
-	}
-}
-
-class IntParameter extends ParameterBase<Int,Interpolation> {
-	public function new(name, mapping:Mapping<Int,Interpolation>) {
-		super(name, mapping);
-	}
-
-	override public function invert() {
-		setValue(-getValue());
-	}
-}
-
-class FloatParameter extends ParameterBase<Float,Interpolation> {
-    public function new(name, mapping:Mapping<Float,Interpolation>) {
-		super(name, mapping);
-	}
-
-	override public function invert() {
-		setValue(-getValue());
-	}
-}
-
+typedef BoolParameter = ParameterBase<Bool,Interpolation>
+typedef IntParameter = ParameterBase<Int,Interpolation>
+typedef FloatParameter = ParameterBase<Float,Interpolation>
 
 @:multiType
-@:forward(name, defaultValue, normalisedValue, normalisedDefaultValue, mapping, change,
-setValue, getValue, setDefault, setToDefault, invert, addObservers, addObserver, removeObserver, toString)
+@:forward(name, defaultValue, normalisedValue, normalisedDefaultValue, mapping, change, setValue, getValue, setDefault, setToDefault, invert, addObservers, addObserver, removeObserver, toString)
 abstract Parameter<T,I>(ParameterBase<T,I>) {
 
     public function new(name:String, min:T, max:T);
@@ -155,8 +123,10 @@ abstract Parameter<T,I>(ParameterBase<T,I>) {
     }
 
 	static function getBool(min,max) return cast new Mapping<Bool,Interpolation>(min, max);
+
 	static function getFloat(min,max) return cast new Mapping<Float,InterpolationLinear>(min, max);
 	static function getFloatExponential(min,max) return cast new Mapping<Float,InterpolationExponential>(min, max);
+
 	static function getInt(min,max) return cast new Mapping<Int,InterpolationLinear>(min, max);
 	static function getIntExponential(min,max) return cast new Mapping<Int,InterpolationExponential>(min, max);
 }
