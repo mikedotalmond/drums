@@ -8,17 +8,11 @@ import input.KeyCodes;
 import js.Browser;
 import js.html.*;
 import js.html.audio.*;
-import pixi.core.display.Container;
-import tones.utils.TimeUtil;
-
 import pixi.core.graphics.*;
 import pixi.core.text.*;
-
 import pixi.plugins.app.Application; // modified
-
 import tones.*;
 import tones.examples.*;
-
 import util.*;
 
 
@@ -53,7 +47,6 @@ class Main extends Application {
 		stageResized();
 
 		Browser.window.addEventListener('keydown', function(e:KeyboardEvent) {
-			//trace(e.keyCode);
 			switch(e.keyCode) {
 				case KeyCodes.SPACE:
 					if (drums.playing) drums.stop();
@@ -64,7 +57,6 @@ class Main extends Application {
 
 
 	function initAudio() {
-
 		audioContext = AudioBase.createContext();
 		outGain = audioContext.createGain();
 		outGain.gain.value = .2;
@@ -108,13 +100,13 @@ class Main extends Application {
 
 		start(Application.AUTO);
 
-		//var txt = new Text('Drums', {font : 'normal 24px Raleway', fill : 'white', align : 'lefts'});
-		//stage.addChild(txt);
-		//txt.position.x = 10;
-		//txt.position.y = 10;
-
-		//stage.interactive = true;
+		// Ubuntu - 300,400,700
+		var txt = new Text('drums', {font : '300 12px Ubuntu', fill : 'white', align : 'left'});
+		stage.addChild(txt);
+		txt.position.x = 10;
+		txt.position.y = 10;
 	}
+
 
 	function initOscilliscope() {
 		oscilliscope = new Oscilliscope(audioContext, 568, 120);
@@ -152,7 +144,6 @@ class Main extends Application {
 		beatLines.displayHeight = Math.round(height);
 		beatLines.position.x = sequenceGrid.x;
 		beatLines.position.y = 0;
-
 
 		//oscilliscope.position.x = beatLines.position.x - 2;
 		//oscilliscope.position.y = 160 + beatLines.position.y + beatLines.displayHeight/2;
