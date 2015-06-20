@@ -16,10 +16,18 @@ import tones.utils.TimeUtil;
 
 class Samples extends AudioBase {
 
-	public var buffer:AudioBuffer = null;
+	public var buffer(get, set):AudioBuffer;
 	public var playbackRate:Float;
 	public var offset:Float;
 	public var duration:Float;
+
+	var _buffer:AudioBuffer = null;
+	inline function get_buffer() return _buffer;
+	function set_buffer(value:AudioBuffer):AudioBuffer {
+		offset = 0;
+		duration = value.duration;
+		return _buffer = value;
+	}
 
 
 	/**

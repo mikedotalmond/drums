@@ -7,6 +7,10 @@
 import hxsignal.Signal;
 import parameter.Mapping;
 
+typedef BoolParameter = ParameterBase<Bool,Interpolation>
+typedef IntParameter = ParameterBase<Int,Interpolation>
+typedef FloatParameter = ParameterBase<Float,Interpolation>
+
 /**
  * T - Float,Int,Bool
  * I - InterpolationNone,InterpolationLinear,InterpolationExponential
@@ -97,9 +101,6 @@ class ParameterBase<T,I> {
 	}
 }
 
-typedef BoolParameter = ParameterBase<Bool,Interpolation>
-typedef IntParameter = ParameterBase<Int,Interpolation>
-typedef FloatParameter = ParameterBase<Float,Interpolation>
 
 @:multiType
 @:forward(name, defaultValue, normalisedValue, normalisedDefaultValue, mapping, change, setValue, getValue, setDefault, setToDefault, invert, addObservers, addObserver, removeObserver, toString)
@@ -124,6 +125,7 @@ abstract Parameter<T,I>(ParameterBase<T,I>) {
 	@:to static inline function toFloatParameterExpo<T,I>(t:ParameterBase<Float,InterpolationExponential>, name:String, min:Float, max:Float):FloatParameter {
 		return new FloatParameter(name, getFloatExponential(min,max));
     }
+
 
 	static function getBool(min,max) return cast new Mapping<Bool,InterpolationNone>(min, max);
 

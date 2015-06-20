@@ -25,6 +25,7 @@ import js.html.XMLHttpRequest;
 class DrumSequencer {
 
 	static var filenames:Array<String> = ['Kick01', 'Snare01', 'Snare02', 'Rim01', 'Rim02', 'Clave01', 'Clave02', 'Cowbell'];
+	static var trackNames:Array<String> = ['Kick', 'Snare 1', 'Snare 2', 'Rim 1', 'Rim 2', 'Clave 1', 'Clave 2', 'Cowbell'];
 
 	static inline var tickLength:Float = 1/4;
 	static inline var stepCount:Int = 16;
@@ -98,7 +99,7 @@ class DrumSequencer {
 
 	function sampleDecoded(buffer:AudioBuffer, index:Int) {
 
-		tracks[index] = new Track(buffer, context, outGain);
+		tracks[index] = new Track(trackNames[index], buffer, context, outGain);
 		loadCount++;
 
 		if (loadCount == 1) {
@@ -126,6 +127,30 @@ class DrumSequencer {
 		if (tickIndex == stepCount) tickIndex = 0;
 
 		playTick(tickIndex, nextTick);
+	}
+
+
+	/**
+	 * Play the selected Cell, using the current parameters for that cell.
+	 * @param	trackIndex
+	 * @param	cellIndex
+	 */
+	public function playTrackCellNow(trackIndex:Int, cellIndex:Int) {
+
+		var track = tracks[trackIndex];
+		var event = track.events[cellIndex];
+		var s = track.source;
+
+		track.pan = event.pan;
+
+		s.volume = event.volume;
+		s.attack = event.attack;
+		s.release = event.release;
+		s.offset = event.offset;
+		s.duration = event.duration;
+		s.playbackRate = event.rate;
+
+		s.playSample(null, 0);
 	}
 
 
@@ -161,6 +186,7 @@ class Track {
 	static inline var HALFPI = 1.5707963267948966;
 	static inline var stepCount = 16;
 
+	public var name(default, null):String;
 	public var events(default, null):Array<TrackEvent>;
 	public var source(default, null):Samples;
 
@@ -169,7 +195,9 @@ class Track {
 	var _pan:Float = 0;
 	var panNode:PannerNode;
 
-	public function new(buffer:AudioBuffer,context:AudioContext, destination:AudioNode) {
+	public function new(name:String, buffer:AudioBuffer,context:AudioContext, destination:AudioNode) {
+
+		this.name = name;
 
 		//pan
 		panNode = context.createPanner();
