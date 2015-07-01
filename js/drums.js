@@ -13,6 +13,15 @@ HxOverrides.cca = function(s,index) {
 	if(x != x) return undefined;
 	return x;
 };
+HxOverrides.substr = function(s,pos,len) {
+	if(pos != null && pos != 0 && len != null && len < 0) return "";
+	if(len == null) len = s.length;
+	if(pos < 0) {
+		pos = s.length + pos;
+		if(pos < 0) pos = 0;
+	} else if(len < 0) len = s.length + len - pos;
+	return s.substr(pos,len);
+};
 HxOverrides.iter = function(a) {
 	return { cur : 0, arr : a, hasNext : function() {
 		return this.cur < this.arr.length;
@@ -151,6 +160,26 @@ var Main = function() {
 			break;
 		}
 	});
+	var floatTest = new parameter_ParameterBase("Parameter<Float,InterpolationLinear> test",parameter__$Parameter_Parameter_$Impl_$.getFloat(0,3.141));
+	var floatTest2 = new parameter_ParameterBase("Parameter<Float,InterpolationExponential> test 2",parameter__$Parameter_Parameter_$Impl_$.getFloatExponential(0,3.141));
+	console.log(floatTest.mapping);
+	floatTest.setValue(.5,true);
+	console.log(floatTest.getValue());
+	console.log(floatTest.getValue(true));
+	console.log(floatTest2);
+	floatTest2.setValue(.5,true);
+	console.log(floatTest2.getValue());
+	console.log(floatTest2.getValue(true));
+	var intTest = new parameter_ParameterBase("Parameter<Int,InterpolationLinear> test",parameter__$Parameter_Parameter_$Impl_$.getInt(-10,10));
+	var intTest2 = new parameter_ParameterBase("Parameter<Int,InterpolationExponential> test",parameter__$Parameter_Parameter_$Impl_$.getIntExponential(-10,10));
+	intTest.setDefault(0);
+	console.log(intTest);
+	console.log(intTest2);
+	console.log(intTest.toString());
+	console.log(intTest2.toString());
+	var boolTest = new parameter_ParameterBase("Parameter<Bool> test",parameter__$Parameter_Parameter_$Impl_$.getBool(false,true));
+	console.log(boolTest);
+	console.log(boolTest.toString());
 };
 Main.__name__ = true;
 Main.main = function() {
@@ -206,11 +235,11 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 		txt.position.y = 10;
 	}
 	,initBeatLines: function() {
-		this.beatLines = new drums_BeatLines(900,448);
+		this.beatLines = new drums_ui_BeatLines(900,448);
 		this.stage.addChild(this.beatLines);
 	}
 	,initStepGrid: function() {
-		this.sequenceGrid = new drums_SequenceGrid(this.drums);
+		this.sequenceGrid = new drums_ui_SequenceGrid(this.drums);
 		this.stage.addChild(this.sequenceGrid);
 	}
 	,tick: function(dt) {
@@ -235,160 +264,19 @@ Reflect.compare = function(a,b) {
 };
 var Std = function() { };
 Std.__name__ = true;
+Std.string = function(s) {
+	return js_Boot.__string_rec(s,"");
+};
 Std.parseInt = function(x) {
 	var v = parseInt(x,10);
 	if(v == 0 && (HxOverrides.cca(x,1) == 120 || HxOverrides.cca(x,1) == 88)) v = parseInt(x);
 	if(isNaN(v)) return null;
 	return v;
 };
-var drums_BeatLines = function(displayWidth,displayHeight) {
-	PIXI.Container.call(this);
-	this.interactive = false;
-	this.interactiveChildren = false;
-	this.displayWidth = displayWidth;
-	this.displayHeight = displayHeight;
-	this.xStep = displayWidth / 16;
-	this.lines = [];
-	var g;
-	var _g = 0;
-	while(_g < 16) {
-		var i = _g++;
-		g = new PIXI.Graphics();
-		g.position.x = Math.round(this.xStep * i);
-		this.lines.push(this.addChild(g));
-	}
-	var _g1 = 0;
-	while(_g1 < 16) {
-		var i1 = _g1++;
-		this.tick(i1);
-	}
-	tones_utils_TimeUtil.get_frameTick().connect($bind(this,this.update));
-};
-drums_BeatLines.__name__ = true;
-drums_BeatLines.__super__ = PIXI.Container;
-drums_BeatLines.prototype = $extend(PIXI.Container.prototype,{
-	tick: function(index) {
-		if(index < 0) return;
-		this.drawLine(this.lines[index],this.lineWidthForStep(index) * 3);
-	}
-	,update: function(dt) {
-		var _g = 0;
-		while(_g < 16) {
-			var i = _g++;
-			var gfx = this.lines[i];
-			var currentWidth = gfx.width;
-			var targetWidth = this.lineWidthForStep(i);
-			if(currentWidth > targetWidth) {
-				var w = currentWidth - (currentWidth - targetWidth) * .2;
-				this.drawLine(gfx,w);
-			}
-		}
-	}
-	,drawLine: function(g,w) {
-		g.clear();
-		g.beginFill(65470,1);
-		g.drawRect(-w / 2,0,w,this.displayHeight);
-		g.endFill();
-	}
-	,lineWidthForStep: function(index) {
-		return index % 4 == 0?6:index % 2 == 0?3:1;
-	}
-});
-var drums_CellEditUI = function(drums1,pointer,displayWidth,displayHeight) {
-	this.tickPulse = 1.0;
-	this.closing = false;
-	this.launching = false;
-	this.bgSize = 0;
-	var _g = this;
-	PIXI.Container.call(this);
-	this.visible = false;
-	this.closed = new hxsignal_impl_Signal0();
-	this.drums = drums1;
-	this.displayWidth = displayWidth;
-	this.displayHeight = displayHeight;
-	this.bg = new PIXI.Graphics();
-	this.bg.interactive = true;
-	pointer.watch(this.bg);
-	pointer.click.connect(function(target) {
-		if(target.parent == _g) _g.close();
-	});
-	this.addChild(this.bg);
-};
-drums_CellEditUI.__name__ = true;
-drums_CellEditUI.__super__ = PIXI.Container;
-drums_CellEditUI.prototype = $extend(PIXI.Container.prototype,{
-	edit: function(trackIndex,tickIndex) {
-		this.visible = this.launching = true;
-		this.closing = false;
-		this.bgSize = 0;
-		this.event = this.drums.tracks[trackIndex].events[tickIndex];
-		this.trackIndex = trackIndex;
-		this.tickIndex = tickIndex;
-	}
-	,close: function() {
-		this.closing = true;
-		this.launching = false;
-		this.closed.emit();
-	}
-	,tick: function(index) {
-		if(index == this.tickIndex && this.event.active) this.tickPulse = 1.007;
-	}
-	,update: function() {
-		if(!this.visible) return;
-		if(this.launching || this.closing) {
-			this.bgSize += this.launching?.06:-.06;
-			if(this.bgSize >= 1) {
-				this.bgSize = 1;
-				this.launching = false;
-			} else if(this.bgSize <= 0) {
-				this.bgSize = 0;
-				this.closing = false;
-				this.visible = false;
-			}
-			this.drawBg(this.bgSize);
-		} else if(this.tickPulse > 1) {
-			this.tickPulse *= .998;
-			if(this.tickPulse < 1) this.tickPulse = 1;
-			var dx = 900 - 900 * this.tickPulse;
-			var dy = 448 - 448 * this.tickPulse;
-			this.bg.position.set(dx,dy);
-			this.bg.clear();
-			this.bg.beginFill(2998015);
-			this.bg.drawRect(-28.125,-28.,900 * this.tickPulse - dx,448 * this.tickPulse - dy);
-			this.bg.endFill();
-		}
-	}
-	,drawBg: function(size) {
-		this.bg.position.set(0,0);
-		this.bg.clear();
-		if(size == 1) {
-			this.bg.beginFill(2998015);
-			this.bg.drawRect(-28.125,-28.,900,448);
-			this.bg.endFill();
-			return;
-		}
-		var size1 = size * size;
-		var startX = this.tickIndex * 56.25;
-		var startY = this.trackIndex * 56.;
-		var right;
-		var left;
-		var up;
-		var down;
-		right = (this.displayWidth - startX - 56.25 + 28.125) * size1;
-		down = (this.displayHeight - startY - 56. + 28.) * size1;
-		left = (-startX * size1 - 56.25 + 28.125) * size1;
-		up = (-startY * size1 - 56. + 28.) * size1;
-		this.bg.beginFill(2998015,size1);
-		this.bg.drawRect(startX,startY,right,down);
-		this.bg.drawRect(startX,startY,left,up);
-		this.bg.drawRect(startX,startY,right,up);
-		this.bg.drawRect(startX,startY,left,down);
-		this.bg.endFill();
-	}
-});
 var drums_DrumSequencer = function(audioContext,destination) {
 	this.tickIndex = -1;
 	this.set_bpm(120);
+	this.set_swing(0.33333333333333331);
 	this.playing = false;
 	this.context = audioContext == null?tones_AudioBase.createContext():audioContext;
 	this.outGain = this.context.createGain();
@@ -444,9 +332,9 @@ drums_DrumSequencer.prototype = {
 		}
 	}
 	,sampleDecoded: function(buffer,index) {
-		this.tracks[index] = new drums_Track(buffer,this.context,this.outGain);
+		this.tracks[index] = new drums_Track(drums_DrumSequencer.trackNames[index],buffer,this.context,this.outGain);
 		this.loadCount++;
-		if(this.loadCount == 1) {
+		if(index == 0) {
 			this.timeTrack = this.tracks[0].source;
 			this.timeTrack.timedEvent.connect($bind(this,this.onTrackTick));
 		} else if(this.loadCount == drums_DrumSequencer.filenames.length) this.ready.emit();
@@ -454,12 +342,29 @@ drums_DrumSequencer.prototype = {
 	,onTrackTick: function(id,time) {
 		if(!this.playing) return;
 		if(time < this.context.currentTime) time = this.context.currentTime;
-		var nextTick = time + 0.25 / (this._bpm / 60);
+		var offset = .0;
+		if(this._swing > 0) {
+			if((this.tickIndex & 1) == 1) offset = (0.25 + this._swing) * 0.25; else offset = (0.25 - this._swing) * 0.25;
+		}
+		var nextTick = time + (0.25 + offset) / (this._bpm / 60);
 		this.timeTrack.addTimedEvent(nextTick);
 		this.tick.emit(this.tickIndex);
 		this.tickIndex++;
 		if(this.tickIndex == 16) this.tickIndex = 0;
 		this.playTick(this.tickIndex,nextTick);
+	}
+	,playTrackCellNow: function(trackIndex,cellIndex) {
+		var track = this.tracks[trackIndex];
+		var event = track.events[cellIndex];
+		var s = track.source;
+		track.set_pan(event.pan);
+		s.set_volume(event.volume);
+		s.set_attack(event.attack);
+		s.set_release(event.release);
+		s.offset = event.offset;
+		s.duration = event.duration;
+		s.playbackRate = event.rate;
+		s.playSample(null,0);
 	}
 	,playTick: function(index,time) {
 		var _g = 0;
@@ -485,15 +390,20 @@ drums_DrumSequencer.prototype = {
 		if(value < 1) value = 1; else if(value > 300) value = 300;
 		return this._bpm = value;
 	}
+	,set_swing: function(value) {
+		if(value < 0) value = 0; else if(value >= 1) value = 0;
+		return this._swing = value;
+	}
 };
-var drums_Track = function(buffer,context,destination) {
+var drums_Track = function(name,buffer,context,destination) {
 	this._pan = 0;
+	this.name = name;
 	this.panNode = context.createPanner();
 	this.panNode.panningModel = "equalpower";
 	this.panNode.connect(destination);
 	this.source = new tones_Samples(context,this.panNode);
 	this.source.set_attack(0);
-	this.source.buffer = buffer;
+	this.source.set_buffer(buffer);
 	var tmp;
 	var _g = [];
 	var _g1 = 0;
@@ -507,7 +417,7 @@ var drums_Track = function(buffer,context,destination) {
 drums_Track.__name__ = true;
 drums_Track.prototype = {
 	randomise: function() {
-		var buffer = this.source.buffer;
+		var buffer = this.source._buffer;
 		var _g = 0;
 		while(_g < 16) {
 			var i = _g++;
@@ -588,26 +498,341 @@ drums_Pointer.prototype = {
 		this.moved = true;
 	}
 };
-var drums_SequenceGrid = function(drums1) {
+var drums_Waveform = function(width,height) {
+	PIXI.Graphics.call(this);
+	this.displayWidth = width - 16;
+	this.displayHeight = height;
+	this.x = 8;
+};
+drums_Waveform.__name__ = true;
+drums_Waveform.__super__ = PIXI.Graphics;
+drums_Waveform.prototype = $extend(PIXI.Graphics.prototype,{
+	drawBuffer: function(buffer) {
+		this.drawPeaks(this.getPeaks(this.displayWidth >> 1,buffer));
+	}
+	,drawPeaks: function(peaks) {
+		var h;
+		var halfH = this.displayHeight / 2;
+		this.clear();
+		this.lineStyle(1.25,1436341,1);
+		this.moveTo(0,halfH);
+		var scale = this.displayWidth / peaks.length;
+		var _g1 = 0;
+		var _g = peaks.length;
+		while(_g1 < _g) {
+			var i = _g1++;
+			h = Math.round(peaks[i] / 1 * halfH);
+			this.moveTo(i * scale,halfH - h);
+			this.lineTo(i * scale,halfH + h);
+		}
+	}
+	,getPeaks: function(length,buffer) {
+		var sampleSize = buffer.length / length;
+		var sampleStep = sampleSize / 10;
+		var channels = buffer.numberOfChannels;
+		var mergedPeaks = [];
+		var _g = 0;
+		while(_g < channels) {
+			var c = _g++;
+			var peaks = [];
+			var chan = buffer.getChannelData(c);
+			var _g1 = 0;
+			while(_g1 < length) {
+				var i = _g1++;
+				var start = i * sampleSize;
+				var end = start + sampleSize;
+				var max = .0;
+				var j = start;
+				while(j < end) {
+					var value = chan[j | 0];
+					if(value > max) max = value; else if(-value > max) max = -value;
+					j += sampleStep;
+				}
+				peaks[i] = max;
+				if(c == 0 || max > mergedPeaks[i]) mergedPeaks[i] = max;
+			}
+		}
+		return mergedPeaks;
+	}
+});
+var drums_ui_BeatLines = function(displayWidth,displayHeight) {
+	PIXI.Container.call(this);
+	this.interactive = false;
+	this.interactiveChildren = false;
+	this.displayWidth = displayWidth;
+	this.displayHeight = displayHeight;
+	this.xStep = displayWidth / 16;
+	this.lines = [];
+	var g;
+	var _g = 0;
+	while(_g < 16) {
+		var i = _g++;
+		g = new PIXI.Graphics();
+		g.position.x = Math.round(this.xStep * i);
+		this.lines.push(this.addChild(g));
+	}
+	var _g1 = 0;
+	while(_g1 < 16) {
+		var i1 = _g1++;
+		this.tick(i1);
+	}
+	tones_utils_TimeUtil.get_frameTick().connect($bind(this,this.update));
+};
+drums_ui_BeatLines.__name__ = true;
+drums_ui_BeatLines.__super__ = PIXI.Container;
+drums_ui_BeatLines.prototype = $extend(PIXI.Container.prototype,{
+	tick: function(index) {
+		if(index < 0) return;
+		this.drawLine(this.lines[index],this.lineWidthForStep(index) * 3);
+	}
+	,update: function(dt) {
+		var _g = 0;
+		while(_g < 16) {
+			var i = _g++;
+			var gfx = this.lines[i];
+			var currentWidth = gfx.width;
+			var targetWidth = this.lineWidthForStep(i);
+			if(currentWidth > targetWidth) {
+				var w = currentWidth - (currentWidth - targetWidth) * .2;
+				this.drawLine(gfx,w);
+			}
+		}
+	}
+	,drawLine: function(g,w) {
+		g.clear();
+		g.beginFill(65470,1);
+		g.drawRect(-w / 2,0,w,this.displayHeight);
+		g.endFill();
+	}
+	,lineWidthForStep: function(index) {
+		return index % 4 == 0?6:index % 2 == 0?3:1;
+	}
+});
+var drums_ui_UIElement = function(width,height) {
+	PIXI.Container.call(this);
+	this.interactive = false;
+	this.bg = new PIXI.Graphics();
+	this.drawBg(width,height);
+	this.addChild(this.bg);
+};
+drums_ui_UIElement.__name__ = true;
+drums_ui_UIElement.__super__ = PIXI.Container;
+drums_ui_UIElement.prototype = $extend(PIXI.Container.prototype,{
+	drawBg: function(w,h) {
+		this.bg.clear();
+		this.bg.beginFill(2998015);
+		this.bg.drawRect(0,0,w,h);
+		this.bg.endFill();
+	}
+});
+var drums_ui_Button = function(width,height) {
+	drums_ui_UIElement.call(this,width,height);
+	this.buttonMode = true;
+	this.interactive = true;
+};
+drums_ui_Button.__name__ = true;
+drums_ui_Button.__super__ = drums_ui_UIElement;
+drums_ui_Button.prototype = $extend(drums_ui_UIElement.prototype,{
+});
+var drums_ui_LabelButton = function(width,height,text) {
+	drums_ui_Button.call(this,width,height);
+	this.label = new PIXI.Text(text,{ font : "400 20px Ubuntu", fill : "white", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
+	this.addChild(this.label);
+	this.label.position.set(Math.round(45. - this.label.width / 2),Math.round(42. - this.label.height / 2));
+};
+drums_ui_LabelButton.__name__ = true;
+drums_ui_LabelButton.__super__ = drums_ui_Button;
+drums_ui_LabelButton.prototype = $extend(drums_ui_Button.prototype,{
+});
+var drums_ui_CellEditPanel = function(drums1,pointer,displayWidth,displayHeight) {
+	this.tickPulse = 1.0;
+	this.closing = false;
+	this.launching = false;
+	this.fadeUI = false;
+	this.bgSize = 0;
+	PIXI.Container.call(this);
+	this.visible = false;
+	this.closed = new hxsignal_impl_Signal0();
+	this.drums = drums1;
+	this.displayWidth = displayWidth;
+	this.displayHeight = displayHeight;
+	this.bg = new PIXI.Graphics();
+	this.bg.interactive = true;
+	this.addChild(this.bg);
+	this.setupUI(pointer);
+	pointer.watch(this.bg);
+	pointer.click.connect($bind(this,this.onClick));
+};
+drums_ui_CellEditPanel.__name__ = true;
+drums_ui_CellEditPanel.__super__ = PIXI.Container;
+drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
+	onClick: function(target) {
+		if(target.parent == this) this.close(); else if(target.parent == this.uiContainer) {
+			this.drums.playTrackCellNow(this.trackIndex,this.tickIndex);
+			this.tickPulse = 1.00725;
+		}
+	}
+	,edit: function(trackIndex,tickIndex) {
+		this.trackIndex = trackIndex;
+		this.tickIndex = tickIndex;
+		this.visible = this.launching = true;
+		this.fadeUI = this.closing = false;
+		this.bgSize = 0;
+		this.uiContainer.alpha = 0;
+		this.event = this.drums.tracks[trackIndex].events[tickIndex];
+		this.waveform.display.drawBuffer(this.drums.tracks[trackIndex].source._buffer);
+		this.cellInfo.update(this.drums,trackIndex,tickIndex);
+	}
+	,close: function() {
+		this.bg.pivot.set(0,0);
+		this.bg.position.set(0,0);
+		this.bg.scale.set(1,1);
+		this.closing = true;
+		this.launching = false;
+		this.uiContainer.alpha = 0;
+		this.closed.emit();
+	}
+	,tick: function(index) {
+		if(index == this.tickIndex && this.event.active) this.tickPulse = 1.00725;
+	}
+	,update: function() {
+		if(!this.visible) return;
+		if(this.launching || this.closing) {
+			this.bgSize += this.launching?.06:-.06;
+			if(this.bgSize >= 1) this.onLaunched(); else if(this.bgSize <= 0) this.onClosed();
+			this.drawBg(this.bgSize);
+		} else {
+			if(this.fadeUI && this.uiContainer.alpha < 1) {
+				this.uiContainer.alpha += .08;
+				if(this.uiContainer.alpha >= 1) {
+					this.uiContainer.alpha = 1;
+					this.fadeUI = false;
+				}
+			}
+			if(this.tickPulse > 1) {
+				this.tickPulse *= .99925;
+				if(this.tickPulse < 1) this.tickPulse = 1;
+				this.bg.pivot.set(this.bg.width / 2,this.bg.height / 2);
+				this.bg.position.set(this.bg.width / 2,this.bg.height / 2);
+				this.bg.scale.set(this.tickPulse,this.tickPulse);
+			}
+		}
+	}
+	,setupUI: function(pointer) {
+		this.uiContainer = new PIXI.Container();
+		var bg = new PIXI.Graphics();
+		bg.beginFill(24712);
+		bg.drawRect(-18.125,-18.,880,428);
+		bg.endFill();
+		this.cellInfo = new drums_ui_CellInfoPanel();
+		this.playButton = new drums_ui_LabelButton(90,84,"Play");
+		this.playButton.position.set(225,0);
+		pointer.watch(this.playButton);
+		this.oscilliscope = new drums_ui_celledit_OscilliscopePanel(this.drums,this.trackIndex,this.tickIndex);
+		this.oscilliscope.y = 98;
+		this.waveform = new drums_ui_celledit_WaveformPanel(this.drums);
+		this.waveform.x = 330;
+		this.uiContainer.addChild(bg);
+		this.uiContainer.addChild(this.cellInfo);
+		this.uiContainer.addChild(this.playButton);
+		this.uiContainer.addChild(this.oscilliscope);
+		this.uiContainer.addChild(this.waveform);
+		this.uiContainer.alpha = 0;
+		this.addChild(this.uiContainer);
+	}
+	,onLaunched: function() {
+		this.launching = false;
+		this.bgSize = 1;
+		this.fadeUI = true;
+	}
+	,onClosed: function() {
+		this.closing = this.visible = false;
+		this.bgSize = 0;
+	}
+	,drawBg: function(size) {
+		this.bg.position.set(0,0);
+		this.bg.clear();
+		if(size == 1) {
+			this.bg.beginFill(2998015);
+			this.bg.drawRect(-28.125,-28.,900,448);
+			this.bg.endFill();
+			return;
+		}
+		var size1 = size * size;
+		var startX = this.tickIndex * 56.25;
+		var startY = this.trackIndex * 56.;
+		var right;
+		var left;
+		var up;
+		var down;
+		right = (this.displayWidth - startX - 56.25 + 28.125) * size1;
+		down = (this.displayHeight - startY - 56. + 28.) * size1;
+		left = (-startX * size1 - 56.25 + 28.125) * size1;
+		up = (-startY * size1 - 56. + 28.) * size1;
+		this.bg.beginFill(2998015,size1);
+		this.bg.drawRect(startX,startY,right,down);
+		this.bg.drawRect(startX,startY,left,up);
+		this.bg.drawRect(startX,startY,right,up);
+		this.bg.drawRect(startX,startY,left,down);
+		this.bg.endFill();
+	}
+});
+var drums_ui_CellInfoPanel = function() {
+	drums_ui_UIElement.call(this,210,84);
+	this.cellIndex = new PIXI.Text("01",{ font : "400 20px Ubuntu", fill : "#00ffbe", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
+	this.cellIndex.position.set(15,10);
+	this.trackName = new PIXI.Text("Cowbell",{ font : "400 26px Ubuntu", fill : "white", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
+	this.duration = new PIXI.Text("00.000 s",{ font : "400 16px Ubuntu", fill : "white", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
+	this.addChild(this.cellIndex);
+	this.addChild(this.trackName);
+	this.addChild(this.duration);
+};
+drums_ui_CellInfoPanel.__name__ = true;
+drums_ui_CellInfoPanel.floatToStringPrecision = function(n,prec) {
+	n = Math.round(n * Math.pow(10,prec));
+	var str = "" + n;
+	var len = str.length;
+	if(len <= prec) {
+		while(len < prec) {
+			str = "0" + str;
+			len++;
+		}
+		return "0." + str;
+	}
+	return HxOverrides.substr(str,0,str.length - prec) + "." + HxOverrides.substr(str,str.length - prec,null);
+};
+drums_ui_CellInfoPanel.__super__ = drums_ui_UIElement;
+drums_ui_CellInfoPanel.prototype = $extend(drums_ui_UIElement.prototype,{
+	update: function(sequencer,i,j) {
+		var jj = j + 1;
+		var track = sequencer.tracks[i];
+		this.cellIndex.text = jj < 10?"0" + jj + "/16":"" + jj + "/16";
+		this.duration.text = "" + drums_ui_CellInfoPanel.floatToStringPrecision(track.source.duration,4);
+		this.duration.position.set(195 - this.duration.width,48);
+		this.trackName.text = track.name;
+		this.trackName.position.set(15,40);
+	}
+});
+var drums_ui_SequenceGrid = function(drums1) {
 	var _g = this;
 	PIXI.Container.call(this);
 	this.drums = drums1;
 	this.displayHeight = 448;
 	this.cells = [];
 	this.pointer = new drums_Pointer();
-	this.cellEditIU = new drums_CellEditUI(drums1,this.pointer,900,448);
-	this.cellEditIU.closed.connect(function() {
+	this.cellEditPanel = new drums_ui_CellEditPanel(drums1,this.pointer,900,448);
+	this.cellEditPanel.closed.connect(function() {
 		_g.cellUI.clear();
 	});
-	this.cellUI = new drums_CellUI(this.pointer);
-	this.cellUI.editEvent.connect(($_=this.cellEditIU,$bind($_,$_.edit)));
+	this.cellUI = new drums_ui_CellUI(this.pointer);
+	this.cellUI.editEvent.connect(($_=this.cellEditPanel,$bind($_,$_.edit)));
 	this.cellUI.toggleEvent.connect($bind(drums1,drums1.toggleEvent));
 	this.createCells();
-	this.addChild(this.cellEditIU);
+	this.addChild(this.cellEditPanel);
 };
-drums_SequenceGrid.__name__ = true;
-drums_SequenceGrid.__super__ = PIXI.Container;
-drums_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
+drums_ui_SequenceGrid.__name__ = true;
+drums_ui_SequenceGrid.__super__ = PIXI.Container;
+drums_ui_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 	createCells: function() {
 		var g;
 		var background = new PIXI.Container();
@@ -667,7 +892,7 @@ drums_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 				this.drawCell(cell,52,16777215);
 			}
 		}
-		this.cellEditIU.tick(index);
+		this.cellEditPanel.tick(index);
 	}
 	,update: function(dt) {
 		var c;
@@ -693,10 +918,10 @@ drums_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 			}
 		}
 		this.cellUI.update();
-		this.cellEditIU.update();
+		this.cellEditPanel.update();
 	}
 });
-var drums_CellUI = function(pointer) {
+var drums_ui_CellUI = function(pointer) {
 	this.isDown = false;
 	this.fading = false;
 	PIXI.Graphics.call(this);
@@ -708,9 +933,9 @@ var drums_CellUI = function(pointer) {
 	pointer.pressCancel.connect($bind(this,this.onPressCancel));
 	pointer.pressProgress.connect($bind(this,this.onPressProgress));
 };
-drums_CellUI.__name__ = true;
-drums_CellUI.__super__ = PIXI.Graphics;
-drums_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
+drums_ui_CellUI.__name__ = true;
+drums_ui_CellUI.__super__ = PIXI.Graphics;
+drums_ui_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
 	onClick: function(target) {
 		if(target.parent != this.parent) return;
 		var values = target.name.split(",");
@@ -771,6 +996,35 @@ drums_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
 		} else if(this.isDown) {
 			if(this.alpha < 1) this.alpha += .05;
 		}
+	}
+});
+var drums_ui_celledit_OscilliscopePanel = function(drums1,trackIndex,tickIndex) {
+	drums_ui_UIElement.call(this,315,100);
+};
+drums_ui_celledit_OscilliscopePanel.__name__ = true;
+drums_ui_celledit_OscilliscopePanel.__super__ = drums_ui_UIElement;
+drums_ui_celledit_OscilliscopePanel.prototype = $extend(drums_ui_UIElement.prototype,{
+	drawBg: function(w,h) {
+		drums_ui_UIElement.prototype.drawBg.call(this,w,h);
+		this.bg.lineStyle(1,6344447);
+		this.bg.moveTo(0,h / 2);
+		this.bg.lineTo(314,h / 2);
+	}
+});
+var drums_ui_celledit_WaveformPanel = function(seq,buffer) {
+	drums_ui_UIElement.call(this,510,198);
+	this.display = new drums_Waveform(510,198);
+	if(buffer != null) this.display.drawBuffer(buffer);
+	this.addChildAt(this.display,1);
+};
+drums_ui_celledit_WaveformPanel.__name__ = true;
+drums_ui_celledit_WaveformPanel.__super__ = drums_ui_UIElement;
+drums_ui_celledit_WaveformPanel.prototype = $extend(drums_ui_UIElement.prototype,{
+	drawBg: function(w,h) {
+		drums_ui_UIElement.prototype.drawBg.call(this,w,h);
+		this.bg.lineStyle(1,6344447);
+		this.bg.moveTo(0,h / 2);
+		this.bg.lineTo(509,h / 2);
 	}
 });
 var haxe_IMap = function() { };
@@ -1210,6 +1464,184 @@ js_Boot.__string_rec = function(o,s) {
 		return String(o);
 	}
 };
+var parameter_Interpolation = function() { };
+parameter_Interpolation.__name__ = true;
+var parameter_InterpolationNone = function() { };
+parameter_InterpolationNone.__name__ = true;
+parameter_InterpolationNone.__interfaces__ = [parameter_Interpolation];
+var parameter_InterpolationLinear = function() { };
+parameter_InterpolationLinear.__name__ = true;
+parameter_InterpolationLinear.__interfaces__ = [parameter_Interpolation];
+var parameter_InterpolationExponential = function() { };
+parameter_InterpolationExponential.__name__ = true;
+parameter_InterpolationExponential.__interfaces__ = [parameter_Interpolation];
+var parameter_IMapping = function() { };
+parameter_IMapping.__name__ = true;
+var parameter_MapBool = function(min,max) {
+	this.min = min;
+	this.max = max;
+};
+parameter_MapBool.__name__ = true;
+parameter_MapBool.__interfaces__ = [parameter_IMapping];
+parameter_MapBool.prototype = {
+	map: function(normalizedValue) {
+		return normalizedValue == 1.0?this.max:this.min;
+	}
+	,mapInverse: function(value) {
+		return value == this.max?1.0:.0;
+	}
+	,toString: function() {
+		return "[MapBool]";
+	}
+};
+var parameter_MapIntExponential = function(min,max) {
+	if(max == null) max = 1;
+	if(min == null) min = -1;
+	this.setMinMax(min,max);
+};
+parameter_MapIntExponential.__name__ = true;
+parameter_MapIntExponential.__interfaces__ = [parameter_IMapping];
+parameter_MapIntExponential.prototype = {
+	setMinMax: function(min,max) {
+		this.min = min;
+		this.max = max;
+		this._t2 = 0;
+		if(min <= 0) this._t2 = 1 + min * -1;
+		this._min = min + this._t2;
+		this._max = max + this._t2;
+		this._t0 = Math.log(this._max / this._min);
+		this._t1 = 1.0 / this._t0;
+	}
+	,map: function(normalisedValue) {
+		return Math.round(this._min * Math.exp(normalisedValue * this._t0) - this._t2);
+	}
+	,mapInverse: function(value) {
+		return Math.log((value + this._t2) / this._min) * this._t1;
+	}
+	,toString: function() {
+		return "[MapIntExponential] min:" + this.min + ", max:" + this.max;
+	}
+};
+var parameter_MapIntLinear = function(min,max) {
+	if(max == null) max = 1;
+	if(min == null) min = 0;
+	this.min = min;
+	this.max = max;
+};
+parameter_MapIntLinear.__name__ = true;
+parameter_MapIntLinear.__interfaces__ = [parameter_IMapping];
+parameter_MapIntLinear.prototype = {
+	map: function(normalisedValue) {
+		return Math.round(this.min + normalisedValue * (this.max - this.min));
+	}
+	,mapInverse: function(value) {
+		return (value - this.min) / (this.max - this.min);
+	}
+	,toString: function() {
+		return "[MapIntLinear] min:" + this.min + ", max:" + this.max;
+	}
+};
+var parameter_MapFloatLinear = function(min,max) {
+	if(max == null) max = 1;
+	if(min == null) min = 0;
+	this.min = min;
+	this.max = max;
+};
+parameter_MapFloatLinear.__name__ = true;
+parameter_MapFloatLinear.__interfaces__ = [parameter_IMapping];
+parameter_MapFloatLinear.prototype = {
+	map: function(normalisedValue) {
+		return this.min + normalisedValue * (this.max - this.min);
+	}
+	,mapInverse: function(value) {
+		return (value - this.min) / (this.max - this.min);
+	}
+	,toString: function() {
+		return "[MapFloatLinear] min:" + this.min + ", max:" + this.max;
+	}
+};
+var parameter_MapFloatExponential = function(min,max) {
+	if(max == null) max = 1.0;
+	if(min == null) min = .0;
+	this.setMinMax(min,max);
+};
+parameter_MapFloatExponential.__name__ = true;
+parameter_MapFloatExponential.__interfaces__ = [parameter_IMapping];
+parameter_MapFloatExponential.prototype = {
+	setMinMax: function(min,max) {
+		this.min = min;
+		this.max = max;
+		this._t2 = 0;
+		if(min <= 0) this._t2 = 1 + min * -1;
+		this._min = min + this._t2;
+		this._max = max + this._t2;
+		this._t0 = Math.log(this._max / this._min);
+		this._t1 = 1.0 / this._t0;
+	}
+	,map: function(normalisedValue) {
+		return this._min * Math.exp(normalisedValue * this._t0) - this._t2;
+	}
+	,mapInverse: function(value) {
+		return Math.log((value + this._t2) / this._min) * this._t1;
+	}
+	,toString: function() {
+		return "[MapFloatExponential] min:" + this.min + ", max:" + this.max;
+	}
+};
+var parameter_ParameterBase = function(name,mapping) {
+	this.name = name;
+	this.mapping = mapping;
+	this.change = new hxsignal_impl_Signal1();
+	this.setDefault(mapping.min);
+};
+parameter_ParameterBase.__name__ = true;
+parameter_ParameterBase.prototype = {
+	setDefault: function(value,normalised) {
+		if(normalised == null) normalised = false;
+		var normValue;
+		if(normalised) {
+			normValue = value;
+			value = this.mapping.map(normValue);
+		} else normValue = this.mapping.mapInverse(value);
+		this.normalisedDefaultValue = normValue;
+		this.defaultValue = value;
+		this.setValue(normValue,true);
+	}
+	,setValue: function(value,normalised,forced) {
+		if(forced == null) forced = false;
+		if(normalised == null) normalised = false;
+		var normValue = normalised?value:this.mapping.mapInverse(value);
+		if(forced || normValue != this.normalisedValue) {
+			this.normalisedValue = normValue;
+			this.change.emit(this);
+		}
+	}
+	,getValue: function(normalised) {
+		if(normalised == null) normalised = false;
+		if(normalised) return this.normalisedValue;
+		return this.mapping.map(this.normalisedValue);
+	}
+	,toString: function() {
+		return "[Parameter] " + this.name + ", defaultValue:" + Std.string(this.defaultValue) + ", mapping:" + this.mapping.toString();
+	}
+};
+var parameter__$Parameter_Parameter_$Impl_$ = {};
+parameter__$Parameter_Parameter_$Impl_$.__name__ = true;
+parameter__$Parameter_Parameter_$Impl_$.getBool = function(min,max) {
+	return new parameter_MapBool(min,max);
+};
+parameter__$Parameter_Parameter_$Impl_$.getFloat = function(min,max) {
+	return new parameter_MapFloatLinear(min,max);
+};
+parameter__$Parameter_Parameter_$Impl_$.getFloatExponential = function(min,max) {
+	return new parameter_MapFloatExponential(min,max);
+};
+parameter__$Parameter_Parameter_$Impl_$.getInt = function(min,max) {
+	return new parameter_MapIntLinear(min,max);
+};
+parameter__$Parameter_Parameter_$Impl_$.getIntExponential = function(min,max) {
+	return new parameter_MapIntExponential(min,max);
+};
 var tones_AudioBase = function(audioContext,destinationNode) {
 	this.lastTime = .0;
 	this.ID = 0;
@@ -1341,7 +1773,7 @@ tones_AudioBase.prototype = {
 	}
 };
 var tones_Samples = function(audioContext,destinationNode) {
-	this.buffer = null;
+	this._buffer = null;
 	tones_AudioBase.call(this,audioContext,destinationNode);
 	this.playbackRate = 1.0;
 	this.offset = 0;
@@ -1350,10 +1782,15 @@ var tones_Samples = function(audioContext,destinationNode) {
 tones_Samples.__name__ = true;
 tones_Samples.__super__ = tones_AudioBase;
 tones_Samples.prototype = $extend(tones_AudioBase.prototype,{
-	playSample: function(buffer,delayBy,autoRelease) {
+	set_buffer: function(value) {
+		this.offset = 0;
+		this.duration = value.duration;
+		return this._buffer = value;
+	}
+	,playSample: function(buffer,delayBy,autoRelease) {
 		if(autoRelease == null) autoRelease = true;
 		if(delayBy == null) delayBy = .0;
-		if(buffer != null) this.buffer = buffer;
+		if(buffer != null) this.set_buffer(buffer);
 		if(delayBy < 0) delayBy = 0;
 		var tmp;
 		this.lastId = this.ID;
@@ -1369,7 +1806,7 @@ tones_Samples.prototype = $extend(tones_AudioBase.prototype,{
 		} else envelope.gain.value = this._volume;
 		envelope.connect(this.destination);
 		var src = this.context.createBufferSource();
-		src.buffer = this.buffer;
+		src.buffer = this._buffer;
 		src.playbackRate.value = this.playbackRate;
 		if(this.duration <= 0) this.duration = src.buffer.duration;
 		src.connect(envelope);
@@ -1422,6 +1859,7 @@ if(node != null) {
 tones_utils_TimeUtil._frameTick = new hxsignal_impl_Signal1();
 window.requestAnimationFrame(tones_utils_TimeUtil.onFrame);
 drums_DrumSequencer.filenames = ["Kick01","Snare01","Snare02","Rim01","Rim02","Clave01","Clave02","Cowbell"];
+drums_DrumSequencer.trackNames = ["Kick","Snare 1","Snare 2","Rim 1","Rim 2","Clave 1","Clave 2","Cowbell"];
 haxe_ds_ObjectMap.count = 0;
 Main.main();
 })(typeof console != "undefined" ? console : {log:function(){}});
