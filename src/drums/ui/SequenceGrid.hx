@@ -1,6 +1,7 @@
-package drums;
+package drums.ui;
 import drums.DrumSequencer;
 import drums.Pointer;
+import drums.ui.CellEditPanel;
 import hxsignal.Signal;
 import js.html.Point;
 import pixi.core.display.Container;
@@ -26,7 +27,7 @@ class SequenceGrid extends Container {
 	var drums:DrumSequencer;
 	var pointer:Pointer;
 	var cellUI:CellUI;
-	var cellEditIU:drums.CellEditUI;
+	var cellEditPanel:CellEditPanel;
 
 	public function new(drums:DrumSequencer) {
 		super();
@@ -37,18 +38,18 @@ class SequenceGrid extends Container {
 		cells = [];
 		pointer = new Pointer();
 
-		cellEditIU = new CellEditUI(drums, pointer, Main.displayWidth, Main.displayHeight);
-		cellEditIU.closed.connect(function() {
+		cellEditPanel = new CellEditPanel(drums, pointer, Main.displayWidth, Main.displayHeight);
+		cellEditPanel.closed.connect(function() {
 			cellUI.clear();
 		});
 
 		cellUI = new CellUI(pointer);
-		cellUI.editEvent.connect(cellEditIU.edit);
+		cellUI.editEvent.connect(cellEditPanel.edit);
 		cellUI.toggleEvent.connect(drums.toggleEvent);
 
 		createCells();
 
-		addChild(cellEditIU);
+		addChild(cellEditPanel);
 	}
 
 	function createCells() {
@@ -112,7 +113,7 @@ class SequenceGrid extends Container {
 			}
 		}
 
-		cellEditIU.tick(index);
+		cellEditPanel.tick(index);
 	}
 
 
@@ -139,7 +140,7 @@ class SequenceGrid extends Container {
 		}
 
 		cellUI.update();
-		cellEditIU.update();
+		cellEditPanel.update();
 	}
 }
 

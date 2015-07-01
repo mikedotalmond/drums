@@ -35,8 +35,10 @@ class DrumSequencer {
 	var lastTick:Int = 0;
 	var timeTrack:AudioBase;
 	var _bpm:Float;
+	var _swing:Float;
 
 	public var bpm(get, set):Float;
+	public var swing(get, set):Float;
 	public var tracks(default, null):Array<Track>;
 	public var tick(default, null):Signal<Int->Void>;
 	public var outGain(default, null):GainNode;
@@ -48,6 +50,8 @@ class DrumSequencer {
 	public function new(audioContext:AudioContext=null, destination:AudioNode=null) {
 
 		bpm = 120;
+		swing = 1/3;
+
 		playing = false;
 
 		context = (audioContext == null ? AudioBase.createContext() : audioContext);
@@ -102,7 +106,7 @@ class DrumSequencer {
 		tracks[index] = new Track(trackNames[index], buffer, context, outGain);
 		loadCount++;
 
-		if (loadCount == 1) {
+		if (index == 0) {
 			timeTrack = tracks[0].source;
 			timeTrack.timedEvent.connect(onTrackTick);
 		} else if (loadCount == filenames.length) {
@@ -117,7 +121,17 @@ class DrumSequencer {
 
 		if (time < context.currentTime) time = context.currentTime;
 
-		var nextTick = time + TimeUtil.stepTime(tickLength, bpm);
+		// apply swing
+		var offset = .0;
+		if (swing > 0) {
+			if (tickIndex & 1 == 1) {
+				offset = (0.25 + swing) * tickLength;
+			} else {
+				offset = (0.25 - swing) * tickLength;
+			}
+		}
+
+		var nextTick = time + TimeUtil.stepTime(tickLength + offset, bpm);
 
 		timeTrack.addTimedEvent(nextTick);
 
@@ -155,6 +169,7 @@ class DrumSequencer {
 
 
 	function playTick(index:Int, time:Float) {
+
 		for (track in tracks) {
 			var event = track.events[index];
 			if (event.active) {
@@ -177,6 +192,13 @@ class DrumSequencer {
 		if (value < 1) value = 1;
 		else if (value > 300) value = 300;
 		return _bpm = value;
+	}
+
+	inline function get_swing():Float return _swing;
+	function set_swing(value:Float):Float {
+		if (value < 0) value = 0;
+		else if (value >= 1) value = 0;
+		return _swing = value;
 	}
 }
 

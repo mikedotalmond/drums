@@ -1,7 +1,11 @@
-package drums;
-import drums.CellEditUI.Button;
+package drums.ui;
 import drums.DrumSequencer;
 import drums.DrumSequencer.TrackEvent;
+import drums.ui.Button;
+import drums.ui.CellInfoPanel;
+import drums.ui.celledit.OscilliscopePanel;
+import drums.ui.celledit.WaveformPanel;
+import drums.ui.UIElement;
 import hxsignal.Signal;
 import pixi.core.display.Container;
 import pixi.core.display.DisplayObject;
@@ -12,7 +16,7 @@ import pixi.core.text.Text;
  * ...
  * @author Mike Almond | https://github.com/mikedotalmond
  */
-class CellEditUI extends Container {
+class CellEditPanel extends Container {
 
 	var drums:DrumSequencer;
 	var displayWidth:Int;
@@ -30,8 +34,10 @@ class CellEditUI extends Container {
 	var event:TrackEvent;
 
 	var uiContainer:Container;
-	var cellInfo:drums.CellEditUI.CellInfo;
-	var playButton:drums.CellEditUI.Button;
+	var cellInfo:CellInfoPanel;
+	var playButton:LabelButton;
+	var waveform:WaveformPanel;
+	var oscilliscope:OscilliscopePanel;
 
 
 	public var closed(default, null):Signal<Void->Void>;
@@ -80,6 +86,8 @@ class CellEditUI extends Container {
 
 		event = drums.tracks[trackIndex].events[tickIndex];
 
+		waveform.setBuffer(drums.tracks[trackIndex].source.buffer);
+
 		cellInfo.update(drums, trackIndex, tickIndex);
 	}
 
@@ -119,7 +127,7 @@ class CellEditUI extends Container {
 		} else {
 
 			if (fadeUI && uiContainer.alpha < 1) {
-				uiContainer.alpha += .07;
+				uiContainer.alpha += .08;
 				if (uiContainer.alpha >= 1) {
 					uiContainer.alpha = 1;
 					fadeUI = false;
@@ -156,14 +164,24 @@ class CellEditUI extends Container {
 		bg.drawRect(x,y,w,h);
 		bg.endFill();
 
-		cellInfo = new CellInfo();
-		playButton = new Button('Play');
+		cellInfo = new CellInfoPanel();
+		playButton = new LabelButton(90, 84, 'Play');
 		playButton.position.set(225, 0);
 		pointer.watch(playButton);
+
+
+		oscilliscope = new OscilliscopePanel(drums, trackIndex, tickIndex);
+		oscilliscope.y = 98;
+
+		waveform = new WaveformPanel(drums);
+		waveform.x = 330;
 
 		uiContainer.addChild(bg);
 		uiContainer.addChild(cellInfo);
 		uiContainer.addChild(playButton);
+
+		uiContainer.addChild(oscilliscope);
+		uiContainer.addChild(waveform);
 
 		uiContainer.alpha = 0;
 		addChild(uiContainer);
@@ -227,88 +245,5 @@ class CellEditUI extends Container {
 	inline function playNow():Void {
 		drums.playTrackCellNow(trackIndex, tickIndex);
 		tickPulse = 1.00725;
-	}
-}
-
-
-
-class UIElement extends Container {
-
-	var bg:Graphics;
-
-	public function new(width:Int, height:Int, ?bgColour:Null<Int>) {
-		super();
-		if (bgColour != null) {
-			bg = new Graphics();
-			bg.beginFill(bgColour);
-			bg.drawRect(0,0,width,height);
-			bg.endFill();
-			addChild(bg);
-		}
-	}
-}
-
-class Button extends UIElement {
-
-	var label:Text;
-
-	public function new(text:String) {
-		super(90, 84, 0x2DBEFF);
-		buttonMode = true;
-		interactive = true;
-		// Ubuntu - 300,400,700
-		label = new Text(text, { font : '400 20px Ubuntu', fill : 'white', align : 'center' } );
-		addChild(label);
-		label.position.set(Math.fround(90/2 - label.width/2), Math.fround(84/2 - label.height/2));
-	}
-}
-
-class CellInfo extends UIElement {
-
-	var trackName:Text;
-	var cellIndex:Text;
-	var duration:Text;
-
-	public function new() {
-
-		super(210, 84, 0x2DBEFF);
-		interactive = false;
-
-		// Ubuntu - 300,400,700
-		cellIndex = new Text('01', { font : '700 24px Ubuntu', fill : '#00ffbe', align : 'center' } );
-		cellIndex.position.set(15,12);
-		addChild(cellIndex);
-
-		trackName = new Text('Cowbell', { font : '400 24px Ubuntu', fill : 'white', align : 'center' } );
-		trackName.position.set(15,42);
-		addChild(trackName);
-
-		duration = new Text('00.000 s', { font : '400 16px Ubuntu', fill : 'white', align : 'center' } );
-		duration.position.set(195 - duration.width, 48);
-		addChild(duration);
-	}
-
-	public function update(sequencer:DrumSequencer, i:Int, j:Int) {
-		var ii = i + 1, jj = j + 1;
-		var track = sequencer.tracks[i];
-		trackName.text = track.name;
-		cellIndex.text = j < 10 ? '0$j': '$j';
-		duration.text = '${floatToStringPrecision(track.source.duration,4)}';
-	}
-
-
-	public static function floatToStringPrecision(n:Float, prec:Int){
-		n = Math.round(n * Math.pow(10, prec));
-		var str = '$n';
-		var len = str.length;
-		if(len <= prec){
-			while(len < prec){
-			  str = '0$str';
-			  len++;
-			}
-			return '0.$str';
-		} else {
-			return str.substr(0, str.length-prec) + '.'+str.substr(str.length-prec);
-		}
 	}
 }

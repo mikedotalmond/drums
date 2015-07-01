@@ -1,4 +1,4 @@
-package drums;
+package drums.ui;
 import pixi.core.display.Container;
 import pixi.core.graphics.Graphics;
 import tones.utils.TimeUtil;
