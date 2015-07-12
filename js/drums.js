@@ -204,7 +204,7 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 		this.drums.set_bpm(60 + Math.random() * 80);
 		this.drums.play(0);
 	}
-	,onSequenceTick: function(index) {
+	,onSequenceTick: function(index,time) {
 		this.beatLines.tick(index);
 		this.sequenceGrid.tick(index);
 		if(index == 0 && Math.random() > .8) {
@@ -282,7 +282,7 @@ var drums_DrumSequencer = function(audioContext,destination) {
 	this.outGain = this.context.createGain();
 	this.outGain.connect(destination == null?this.context.destination:destination);
 	this.ready = new hxsignal_impl_Signal0();
-	this.tick = new hxsignal_impl_Signal1();
+	this.tick = new hxsignal_impl_Signal2();
 	this.tracks = [];
 	this.loadSamples();
 };
@@ -348,7 +348,7 @@ drums_DrumSequencer.prototype = {
 		}
 		var nextTick = time + (0.25 + offset) / (this._bpm / 60);
 		this.timeTrack.addTimedEvent(nextTick);
-		this.tick.emit(this.tickIndex);
+		this.tick.emit(this.tickIndex,time);
 		this.tickIndex++;
 		if(this.tickIndex == 16) this.tickIndex = 0;
 		this.playTick(this.tickIndex,nextTick);
@@ -507,24 +507,40 @@ var drums_Waveform = function(width,height) {
 drums_Waveform.__name__ = true;
 drums_Waveform.__super__ = PIXI.Graphics;
 drums_Waveform.prototype = $extend(PIXI.Graphics.prototype,{
-	drawBuffer: function(buffer) {
-		this.drawPeaks(this.getPeaks(this.displayWidth >> 1,buffer));
+	drawBuffer: function(buffer,normalise) {
+		if(normalise == null) normalise = true;
+		var peaks = buffer == this.lastBuffer?this.lastPeaks:this.getPeaks(this.displayWidth >> 1,buffer);
+		this.drawPeaks(peaks,normalise);
+		this.lastPeaks = peaks;
+		this.lastBuffer = buffer;
 	}
-	,drawPeaks: function(peaks) {
+	,drawPeaks: function(peaks,normalise) {
 		var h;
 		var halfH = this.displayHeight / 2;
 		this.clear();
 		this.lineStyle(1.25,1436341,1);
 		this.moveTo(0,halfH);
+		var max = normalise?this.getMax(peaks):1.0;
 		var scale = this.displayWidth / peaks.length;
-		var _g1 = 0;
-		var _g = peaks.length;
-		while(_g1 < _g) {
-			var i = _g1++;
-			h = Math.round(peaks[i] / 1 * halfH);
+		var n = peaks.length;
+		max *= 1.05;
+		var _g = 0;
+		while(_g < n) {
+			var i = _g++;
+			h = Math.round(peaks[i] / max * halfH);
 			this.moveTo(i * scale,halfH - h);
 			this.lineTo(i * scale,halfH + h);
 		}
+	}
+	,getMax: function(peaks) {
+		var max = .0;
+		var _g = 0;
+		while(_g < peaks.length) {
+			var v = peaks[_g];
+			++_g;
+			if(v > max) max = v;
+		}
+		return max;
 	}
 	,getPeaks: function(length,buffer) {
 		var sampleSize = buffer.length / length;
@@ -552,7 +568,7 @@ drums_Waveform.prototype = $extend(PIXI.Graphics.prototype,{
 				if(c == 0 || max > mergedPeaks[i]) mergedPeaks[i] = max;
 			}
 		}
-		return mergedPeaks;
+		return new Float32Array(mergedPeaks);
 	}
 });
 var drums_ui_BeatLines = function(displayWidth,displayHeight) {
@@ -680,7 +696,7 @@ drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
 		this.bgSize = 0;
 		this.uiContainer.alpha = 0;
 		this.event = this.drums.tracks[trackIndex].events[tickIndex];
-		this.waveform.display.drawBuffer(this.drums.tracks[trackIndex].source._buffer);
+		this.waveform.setup(this.drums,trackIndex,tickIndex);
 		this.cellInfo.update(this.drums,trackIndex,tickIndex);
 	}
 	,close: function() {
@@ -693,24 +709,27 @@ drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
 		this.closed.emit();
 	}
 	,tick: function(index) {
-		if(index == this.tickIndex && this.event.active) this.tickPulse = 1.00725;
+		if(index == this.tickIndex && this.event.active) {
+			this.waveform.play(this.event.duration);
+			this.tickPulse = 1.00725;
+		}
 	}
 	,update: function() {
 		if(!this.visible) return;
 		if(this.launching || this.closing) {
-			this.bgSize += this.launching?.06:-.06;
+			this.bgSize += this.launching?.07:-.07;
 			if(this.bgSize >= 1) this.onLaunched(); else if(this.bgSize <= 0) this.onClosed();
 			this.drawBg(this.bgSize);
 		} else {
 			if(this.fadeUI && this.uiContainer.alpha < 1) {
-				this.uiContainer.alpha += .08;
+				this.uiContainer.alpha += .09;
 				if(this.uiContainer.alpha >= 1) {
 					this.uiContainer.alpha = 1;
 					this.fadeUI = false;
 				}
 			}
 			if(this.tickPulse > 1) {
-				this.tickPulse *= .99925;
+				this.tickPulse *= .9995;
 				if(this.tickPulse < 1) this.tickPulse = 1;
 				this.bg.pivot.set(this.bg.width / 2,this.bg.height / 2);
 				this.bg.position.set(this.bg.width / 2,this.bg.height / 2);
@@ -730,7 +749,7 @@ drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
 		pointer.watch(this.playButton);
 		this.oscilliscope = new drums_ui_celledit_OscilliscopePanel(this.drums,this.trackIndex,this.tickIndex);
 		this.oscilliscope.y = 98;
-		this.waveform = new drums_ui_celledit_WaveformPanel(this.drums);
+		this.waveform = new drums_ui_celledit_WaveformPanel();
 		this.waveform.x = 330;
 		this.uiContainer.addChild(bg);
 		this.uiContainer.addChild(this.cellInfo);
@@ -814,20 +833,17 @@ drums_ui_CellInfoPanel.prototype = $extend(drums_ui_UIElement.prototype,{
 	}
 });
 var drums_ui_SequenceGrid = function(drums1) {
-	var _g = this;
 	PIXI.Container.call(this);
 	this.drums = drums1;
 	this.displayHeight = 448;
 	this.cells = [];
 	this.pointer = new drums_Pointer();
 	this.cellEditPanel = new drums_ui_CellEditPanel(drums1,this.pointer,900,448);
-	this.cellEditPanel.closed.connect(function() {
-		_g.cellUI.clear();
-	});
 	this.cellUI = new drums_ui_CellUI(this.pointer);
 	this.cellUI.editEvent.connect(($_=this.cellEditPanel,$bind($_,$_.edit)));
 	this.cellUI.toggleEvent.connect($bind(drums1,drums1.toggleEvent));
 	this.createCells();
+	this.cellEditPanel.closed.connect(($_=this.cellUI,$bind($_,$_.clear)));
 	this.addChild(this.cellEditPanel);
 };
 drums_ui_SequenceGrid.__name__ = true;
@@ -1011,16 +1027,21 @@ drums_ui_celledit_OscilliscopePanel.prototype = $extend(drums_ui_UIElement.proto
 		this.bg.lineTo(314,h / 2);
 	}
 });
-var drums_ui_celledit_WaveformPanel = function(seq,buffer) {
+var drums_ui_celledit_WaveformPanel = function() {
 	drums_ui_UIElement.call(this,510,198);
-	this.display = new drums_Waveform(510,198);
-	if(buffer != null) this.display.drawBuffer(buffer);
-	this.addChildAt(this.display,1);
+	this.waveform = new drums_Waveform(510,198);
+	this.addChildAt(this.waveform,1);
 };
 drums_ui_celledit_WaveformPanel.__name__ = true;
 drums_ui_celledit_WaveformPanel.__super__ = drums_ui_UIElement;
 drums_ui_celledit_WaveformPanel.prototype = $extend(drums_ui_UIElement.prototype,{
-	drawBg: function(w,h) {
+	setup: function(drums1,trackIndex,tickIndex) {
+		var buffer = drums1.tracks[trackIndex].source._buffer;
+		this.waveform.drawBuffer(buffer);
+	}
+	,play: function(duration) {
+	}
+	,drawBg: function(w,h) {
 		drums_ui_UIElement.prototype.drawBg.call(this,w,h);
 		this.bg.lineStyle(1,6344447);
 		this.bg.moveTo(0,h / 2);
