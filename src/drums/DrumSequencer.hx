@@ -40,7 +40,7 @@ class DrumSequencer {
 	public var bpm(get, set):Float;
 	public var swing(get, set):Float;
 	public var tracks(default, null):Array<Track>;
-	public var tick(default, null):Signal<Int->Void>;
+	public var tick(default, null):Signal<Int->Float->Void>;
 	public var outGain(default, null):GainNode;
 	public var context(default, null):AudioContext;
 	public var ready(default, null):Signal<Void->Void>;
@@ -60,7 +60,7 @@ class DrumSequencer {
 		outGain.connect(destination == null ? context.destination : destination);
 
 		ready = new Signal<Void->Void>();
-		tick = new Signal<Int->Void>();
+		tick = new Signal<Int->Float->Void>();
 		tracks = [];
 
 		loadSamples();
@@ -135,7 +135,7 @@ class DrumSequencer {
 
 		timeTrack.addTimedEvent(nextTick);
 
-		tick.emit(tickIndex);
+		tick.emit(tickIndex, time);
 
 		tickIndex++;
 		if (tickIndex == stepCount) tickIndex = 0;
@@ -165,6 +165,11 @@ class DrumSequencer {
 		s.playbackRate = event.rate;
 
 		s.playSample(null, 0);
+	}
+
+
+	public function isPlaying(trackIndex:Int) {
+		return tracks[trackIndex].events[tickIndex].active;
 	}
 
 

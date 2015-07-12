@@ -1,4 +1,5 @@
 package drums.ui.celledit;
+import drums.DrumSequencer;
 import drums.Waveform;
 import js.html.audio.AudioBuffer;
 
@@ -8,19 +9,27 @@ import js.html.audio.AudioBuffer;
  */
 class WaveformPanel extends UIElement {
 
-	var display:Waveform;
+	var waveform:Waveform;
 
-	public function new(seq:DrumSequencer, ?buffer:AudioBuffer = null) {
+	public function new() {
 		super(510, 198);
 
-		display = new Waveform(510, 198);
-		if (buffer != null) setBuffer(buffer);
+		waveform = new Waveform(510, 198);
 
-		addChildAt(display, 1);
+		//seq.tick.connect();
+		//seq.isPlaying(0);
+
+		addChildAt(waveform, 1);
 	}
 
-	inline public function setBuffer(buffer) {
-		display.drawBuffer(buffer);
+
+	public function setup(drums:DrumSequencer, trackIndex:Int, tickIndex:Int) {
+		var buffer = drums.tracks[trackIndex].source.buffer;
+		waveform.drawBuffer(buffer);
+	}
+
+	public function play(duration:Float) {
+
 	}
 
 	override function drawBg(w, h) {

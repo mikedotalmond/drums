@@ -86,7 +86,7 @@ class CellEditPanel extends Container {
 
 		event = drums.tracks[trackIndex].events[tickIndex];
 
-		waveform.setBuffer(drums.tracks[trackIndex].source.buffer);
+		waveform.setup(drums, trackIndex, tickIndex);
 
 		cellInfo.update(drums, trackIndex, tickIndex);
 	}
@@ -107,6 +107,7 @@ class CellEditPanel extends Container {
 
 	public function tick(index:Int) {
 		if (index == tickIndex && event.active) {
+			waveform.play(event.duration);
 			tickPulse = 1.00725;
 		}
 	}
@@ -117,7 +118,7 @@ class CellEditPanel extends Container {
 
 		if (launching || closing) {
 
-			bgSize += (launching ? .06 : - .06);
+			bgSize += (launching ? .07 : - .07);
 
 			if (bgSize >= 1) onLaunched();
 			else if (bgSize <= 0) onClosed();
@@ -127,7 +128,7 @@ class CellEditPanel extends Container {
 		} else {
 
 			if (fadeUI && uiContainer.alpha < 1) {
-				uiContainer.alpha += .08;
+				uiContainer.alpha += .09;
 				if (uiContainer.alpha >= 1) {
 					uiContainer.alpha = 1;
 					fadeUI = false;
@@ -137,7 +138,7 @@ class CellEditPanel extends Container {
 			// pulse with ticks for this cell
 			if (tickPulse > 1) {
 
-				tickPulse *= .99925;
+				tickPulse *= .9995;
 				if (tickPulse < 1) tickPulse = 1;
 
 				bg.pivot.set(bg.width / 2, bg.height / 2);
@@ -173,7 +174,7 @@ class CellEditPanel extends Container {
 		oscilliscope = new OscilliscopePanel(drums, trackIndex, tickIndex);
 		oscilliscope.y = 98;
 
-		waveform = new WaveformPanel(drums);
+		waveform = new WaveformPanel();
 		waveform.x = 330;
 
 		uiContainer.addChild(bg);

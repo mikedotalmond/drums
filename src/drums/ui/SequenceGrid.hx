@@ -39,9 +39,6 @@ class SequenceGrid extends Container {
 		pointer = new Pointer();
 
 		cellEditPanel = new CellEditPanel(drums, pointer, Main.displayWidth, Main.displayHeight);
-		cellEditPanel.closed.connect(function() {
-			cellUI.clear();
-		});
 
 		cellUI = new CellUI(pointer);
 		cellUI.editEvent.connect(cellEditPanel.edit);
@@ -49,6 +46,7 @@ class SequenceGrid extends Container {
 
 		createCells();
 
+		cellEditPanel.closed.connect(cellUI.clear);
 		addChild(cellEditPanel);
 	}
 
