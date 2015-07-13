@@ -68,16 +68,13 @@ class AudioNodeRecorder {
 		}
     }
 	
-	
 	function onAudioProcess(e) {
 		if (!recording) return;
-		worker.postMessage({
-			command: 'record',
-			buffer: [
-			  e.inputBuffer.getChannelData(0),
-			  e.inputBuffer.getChannelData(1)
-			]
-		});	  
+		
+		RecordBufferMessage.buffer[0] = e.inputBuffer.getChannelData(0);
+		RecordBufferMessage.buffer[1] = e.inputBuffer.getChannelData(1);
+		
+		worker.postMessage(RecordBufferMessage);
 	}
 	
 	
@@ -102,12 +99,15 @@ class AudioNodeRecorder {
 		link.dispatchEvent(click);
 	}
 	
+	static var RecordBufferMessage	:BufferMessage = { command: 'record', buffer:[] };
 	static var GetBufferMessage		:BufferMessage = { command: 'getBuffer' };
 	static var EncodeWAVMessage		:BufferMessage = { command: 'exportWAV', type: 'audio/wav' };
 	static var ClearBufferMessage	:BufferMessage = { command: 'clear' };
 }
 
+
 typedef BufferMessage = {
 	var command:String;
 	@:optional var type:String;
+	@:optional var buffer:Array<Float32Array>;
 }
