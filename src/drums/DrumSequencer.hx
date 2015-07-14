@@ -41,7 +41,7 @@ class DrumSequencer {
 	public var swing(get, set):Float;
 	public var tracks(default, null):Array<Track>;
 	public var tick(default, null):Signal<Int->Float->Void>;
-	public var outGain(default, null):GainNode;
+	public var output(default, null):GainNode;
 	public var context(default, null):AudioContext;
 	public var ready(default, null):Signal<Void->Void>;
 	public var playing(default, null):Bool;
@@ -56,8 +56,8 @@ class DrumSequencer {
 
 		context = (audioContext == null ? AudioBase.createContext() : audioContext);
 
-		outGain = context.createGain();
-		outGain.connect(destination == null ? context.destination : destination);
+		output = context.createGain();
+		output.connect(destination == null ? context.destination : destination);
 
 		ready = new Signal<Void->Void>();
 		tick = new Signal<Int->Float->Void>();
@@ -103,7 +103,7 @@ class DrumSequencer {
 
 	function sampleDecoded(buffer:AudioBuffer, index:Int) {
 
-		tracks[index] = new Track(trackNames[index], buffer, context, outGain);
+		tracks[index] = new Track(trackNames[index], buffer, context, output);
 		loadCount++;
 
 		if (index == 0) {
