@@ -46,6 +46,7 @@ List.prototype = {
 		if(this.q == null) this.q = x;
 		this.length++;
 	}
+	,__class__: List
 };
 var pixi_plugins_app_Application = function() {
 	this.lastTime = window.performance.now();
@@ -142,8 +143,10 @@ pixi_plugins_app_Application.prototype = {
 			this.stats.begin();
 		}
 	}
+	,__class__: pixi_plugins_app_Application
 };
 var Main = function() {
+	this.randomise = true;
 	var _g1 = this;
 	pixi_plugins_app_Application.call(this);
 	this.ready = false;
@@ -198,29 +201,57 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 		this.drums = new drums_DrumSequencer(this.audioContext,this.outGain);
 		this.drums.tick.connect($bind(this,this.onSequenceTick));
 		this.drums.ready.connect($bind(this,this.onDrumsReady));
+		this.recorder = new tones_utils_AudioNodeRecorder(this.drums.output);
+		this.recorder.wavEncoded.connect($bind(this,this.onOutputBufferEncoded));
+		var o = window;
+		o.startRecord = $bind(this,this.startRecord);
+		var o1 = window;
+		o1.stopRecord = $bind(this,this.stopRecord);
+		var o2 = window;
+		o2.toggleRandomise = $bind(this,this.toggleRandomise);
+	}
+	,startRecord: function() {
+		console.log("recording...");
+		this.recorder.worker.postMessage(tones_utils_AudioNodeRecorder.ClearBufferMessage);
+		this.recorder.recording = true;
+	}
+	,stopRecord: function() {
+		console.log("stopped recording");
+		this.recorder.recording = false;
+		this.recorder.worker.postMessage(tones_utils_AudioNodeRecorder.EncodeWAVMessage);
+	}
+	,onOutputBufferEncoded: function(data) {
+		console.log("Encoded wav - " + (data.size >> 10) / 1024 + " MB  (" + data.size + " bytes)");
+		tones_utils_AudioNodeRecorder.forceDownload(data);
 	}
 	,onDrumsReady: function() {
 		this.ready = true;
 		this.drums.set_bpm(60 + Math.random() * 80);
 		this.drums.play(0);
 	}
+	,toggleRandomise: function() {
+		this.randomise = !this.randomise;
+		console.log("randomise:" + Std.string(this.randomise));
+	}
 	,onSequenceTick: function(index,time) {
 		this.beatLines.tick(index);
 		this.sequenceGrid.tick(index);
-		if(index == 0 && Math.random() > .8) {
-			var tmp;
-			var x = Math.random() * 8;
-			tmp = x | 0;
-			this.drums.tracks[tmp].randomise();
-		}
-		if(Math.random() > .95) {
-			var tmp1;
-			var x1 = Math.random() * 8;
-			tmp1 = x1 | 0;
-			var tmp2;
-			var x2 = Math.random() * 16;
-			tmp2 = x2 | 0;
-			this.drums.tracks[tmp1].events[tmp2].active = Math.round(Math.random()) == 1;
+		if(this.randomise) {
+			if(index == 0 && Math.random() > .8) {
+				var tmp;
+				var x = Math.random() * 8;
+				tmp = x | 0;
+				this.drums.tracks[tmp].randomise();
+			}
+			if(Math.random() > .95) {
+				var tmp1;
+				var x1 = Math.random() * 8;
+				tmp1 = x1 | 0;
+				var tmp2;
+				var x2 = Math.random() * 16;
+				tmp2 = x2 | 0;
+				this.drums.tracks[tmp1].events[tmp2].active = Math.round(Math.random()) == 1;
+			}
 		}
 	}
 	,initPixi: function() {
@@ -255,6 +286,7 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 		this.beatLines.position.x = this.sequenceGrid.x;
 		this.beatLines.position.y = 0;
 	}
+	,__class__: Main
 });
 Math.__name__ = true;
 var Reflect = function() { };
@@ -279,8 +311,8 @@ var drums_DrumSequencer = function(audioContext,destination) {
 	this.set_swing(0.33333333333333331);
 	this.playing = false;
 	this.context = audioContext == null?tones_AudioBase.createContext():audioContext;
-	this.outGain = this.context.createGain();
-	this.outGain.connect(destination == null?this.context.destination:destination);
+	this.output = this.context.createGain();
+	this.output.connect(destination == null?this.context.destination:destination);
 	this.ready = new hxsignal_impl_Signal0();
 	this.tick = new hxsignal_impl_Signal2();
 	this.tracks = [];
@@ -332,7 +364,7 @@ drums_DrumSequencer.prototype = {
 		}
 	}
 	,sampleDecoded: function(buffer,index) {
-		this.tracks[index] = new drums_Track(drums_DrumSequencer.trackNames[index],buffer,this.context,this.outGain);
+		this.tracks[index] = new drums_Track(drums_DrumSequencer.trackNames[index],buffer,this.context,this.output);
 		this.loadCount++;
 		if(index == 0) {
 			this.timeTrack = this.tracks[0].source;
@@ -394,6 +426,7 @@ drums_DrumSequencer.prototype = {
 		if(value < 0) value = 0; else if(value >= 1) value = 0;
 		return this._swing = value;
 	}
+	,__class__: drums_DrumSequencer
 };
 var drums_Track = function(name,buffer,context,destination) {
 	this._pan = 0;
@@ -444,6 +477,7 @@ drums_Track.prototype = {
 		this.panNode.setPosition(Math.sin(x),0,Math.sin(z));
 		return this._pan = value;
 	}
+	,__class__: drums_Track
 };
 var drums_Pointer = function() {
 	this.lastTime = 0;
@@ -497,6 +531,7 @@ drums_Pointer.prototype = {
 	,onMove: function(e) {
 		this.moved = true;
 	}
+	,__class__: drums_Pointer
 };
 var drums_Waveform = function(width,height) {
 	PIXI.Graphics.call(this);
@@ -570,6 +605,7 @@ drums_Waveform.prototype = $extend(PIXI.Graphics.prototype,{
 		}
 		return new Float32Array(mergedPeaks);
 	}
+	,__class__: drums_Waveform
 });
 var drums_ui_BeatLines = function(displayWidth,displayHeight) {
 	PIXI.Container.call(this);
@@ -623,6 +659,7 @@ drums_ui_BeatLines.prototype = $extend(PIXI.Container.prototype,{
 	,lineWidthForStep: function(index) {
 		return index % 4 == 0?6:index % 2 == 0?3:1;
 	}
+	,__class__: drums_ui_BeatLines
 });
 var drums_ui_UIElement = function(width,height) {
 	PIXI.Container.call(this);
@@ -640,6 +677,7 @@ drums_ui_UIElement.prototype = $extend(PIXI.Container.prototype,{
 		this.bg.drawRect(0,0,w,h);
 		this.bg.endFill();
 	}
+	,__class__: drums_ui_UIElement
 });
 var drums_ui_Button = function(width,height) {
 	drums_ui_UIElement.call(this,width,height);
@@ -649,6 +687,7 @@ var drums_ui_Button = function(width,height) {
 drums_ui_Button.__name__ = true;
 drums_ui_Button.__super__ = drums_ui_UIElement;
 drums_ui_Button.prototype = $extend(drums_ui_UIElement.prototype,{
+	__class__: drums_ui_Button
 });
 var drums_ui_LabelButton = function(width,height,text) {
 	drums_ui_Button.call(this,width,height);
@@ -659,6 +698,7 @@ var drums_ui_LabelButton = function(width,height,text) {
 drums_ui_LabelButton.__name__ = true;
 drums_ui_LabelButton.__super__ = drums_ui_Button;
 drums_ui_LabelButton.prototype = $extend(drums_ui_Button.prototype,{
+	__class__: drums_ui_LabelButton
 });
 var drums_ui_CellEditPanel = function(drums1,pointer,displayWidth,displayHeight) {
 	this.tickPulse = 1.0;
@@ -795,6 +835,7 @@ drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
 		this.bg.drawRect(startX,startY,left,down);
 		this.bg.endFill();
 	}
+	,__class__: drums_ui_CellEditPanel
 });
 var drums_ui_CellInfoPanel = function() {
 	drums_ui_UIElement.call(this,210,84);
@@ -831,6 +872,7 @@ drums_ui_CellInfoPanel.prototype = $extend(drums_ui_UIElement.prototype,{
 		this.trackName.text = track.name;
 		this.trackName.position.set(15,40);
 	}
+	,__class__: drums_ui_CellInfoPanel
 });
 var drums_ui_SequenceGrid = function(drums1) {
 	PIXI.Container.call(this);
@@ -936,6 +978,7 @@ drums_ui_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 		this.cellUI.update();
 		this.cellEditPanel.update();
 	}
+	,__class__: drums_ui_SequenceGrid
 });
 var drums_ui_CellUI = function(pointer) {
 	this.isDown = false;
@@ -1013,6 +1056,7 @@ drums_ui_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
 			if(this.alpha < 1) this.alpha += .05;
 		}
 	}
+	,__class__: drums_ui_CellUI
 });
 var drums_ui_celledit_OscilliscopePanel = function(drums1,trackIndex,tickIndex) {
 	drums_ui_UIElement.call(this,315,100);
@@ -1026,6 +1070,7 @@ drums_ui_celledit_OscilliscopePanel.prototype = $extend(drums_ui_UIElement.proto
 		this.bg.moveTo(0,h / 2);
 		this.bg.lineTo(314,h / 2);
 	}
+	,__class__: drums_ui_celledit_OscilliscopePanel
 });
 var drums_ui_celledit_WaveformPanel = function() {
 	drums_ui_UIElement.call(this,510,198);
@@ -1047,6 +1092,7 @@ drums_ui_celledit_WaveformPanel.prototype = $extend(drums_ui_UIElement.prototype
 		this.bg.moveTo(0,h / 2);
 		this.bg.lineTo(509,h / 2);
 	}
+	,__class__: drums_ui_celledit_WaveformPanel
 });
 var haxe_IMap = function() { };
 haxe_IMap.__name__ = true;
@@ -1117,6 +1163,7 @@ haxe_ds_BalancedTree.prototype = {
 	,compare: function(k1,k2) {
 		return Reflect.compare(k1,k2);
 	}
+	,__class__: haxe_ds_BalancedTree
 };
 var haxe_ds_TreeNode = function(l,k,v,r,h) {
 	if(h == null) h = -1;
@@ -1143,6 +1190,9 @@ var haxe_ds_TreeNode = function(l,k,v,r,h) {
 	} else this._height = h;
 };
 haxe_ds_TreeNode.__name__ = true;
+haxe_ds_TreeNode.prototype = {
+	__class__: haxe_ds_TreeNode
+};
 var haxe_ds_IntMap = function() {
 	this.h = { };
 };
@@ -1154,6 +1204,7 @@ haxe_ds_IntMap.prototype = {
 		delete(this.h[key]);
 		return true;
 	}
+	,__class__: haxe_ds_IntMap
 };
 var haxe_ds_ObjectMap = function() {
 	this.h = { };
@@ -1189,6 +1240,7 @@ haxe_ds_ObjectMap.prototype = {
 			return this.ref[i.__id__];
 		}};
 	}
+	,__class__: haxe_ds_ObjectMap
 };
 var hxsignal_ConnectionTimes = { __ename__ : true, __constructs__ : ["Once","Times","Forever"] };
 hxsignal_ConnectionTimes.Once = ["Once",0];
@@ -1211,6 +1263,7 @@ var hxsignal_ds_LinkedList = function() {
 hxsignal_ds_LinkedList.__name__ = true;
 hxsignal_ds_LinkedList.__super__ = List;
 hxsignal_ds_LinkedList.prototype = $extend(List.prototype,{
+	__class__: hxsignal_ds_LinkedList
 });
 var hxsignal_ds_TreeMap = function() {
 	haxe_ds_BalancedTree.call(this);
@@ -1244,6 +1297,7 @@ hxsignal_ds_TreeMap.prototype = $extend(haxe_ds_BalancedTree.prototype,{
 		if(n != null) while(n.right != null) n = n.right;
 		return n;
 	}
+	,__class__: hxsignal_ds_TreeMap
 });
 var hxsignal_impl_Connection = function(signal,slot,times) {
 	this.signal = signal;
@@ -1255,6 +1309,9 @@ var hxsignal_impl_Connection = function(signal,slot,times) {
 	this.calledTimes = 0;
 };
 hxsignal_impl_Connection.__name__ = true;
+hxsignal_impl_Connection.prototype = {
+	__class__: hxsignal_impl_Connection
+};
 var hxsignal_impl_SignalBase = function() {
 	this.slots = new hxsignal_impl_SlotMap();
 };
@@ -1311,6 +1368,7 @@ hxsignal_impl_SignalBase.prototype = {
 		}
 		this.emitting = false;
 	}
+	,__class__: hxsignal_impl_SignalBase
 };
 var hxsignal_impl_Signal0 = function() {
 	hxsignal_impl_SignalBase.call(this);
@@ -1324,6 +1382,7 @@ hxsignal_impl_Signal0.prototype = $extend(hxsignal_impl_SignalBase.prototype,{
 		};
 		this.loop(delegate);
 	}
+	,__class__: hxsignal_impl_Signal0
 });
 var hxsignal_impl_Signal1 = function() {
 	hxsignal_impl_SignalBase.call(this);
@@ -1337,6 +1396,7 @@ hxsignal_impl_Signal1.prototype = $extend(hxsignal_impl_SignalBase.prototype,{
 		};
 		this.loop(delegate);
 	}
+	,__class__: hxsignal_impl_Signal1
 });
 var hxsignal_impl_Signal2 = function() {
 	hxsignal_impl_SignalBase.call(this);
@@ -1350,6 +1410,7 @@ hxsignal_impl_Signal2.prototype = $extend(hxsignal_impl_SignalBase.prototype,{
 		};
 		this.loop(delegate);
 	}
+	,__class__: hxsignal_impl_Signal2
 });
 var hxsignal_impl_SlotMap = function() {
 	this.clear();
@@ -1404,6 +1465,7 @@ hxsignal_impl_SlotMap.prototype = {
 		con.connected = false;
 		return true;
 	}
+	,__class__: hxsignal_impl_SlotMap
 };
 var js__$Boot_HaxeError = function(val) {
 	Error.call(this);
@@ -1414,9 +1476,19 @@ var js__$Boot_HaxeError = function(val) {
 js__$Boot_HaxeError.__name__ = true;
 js__$Boot_HaxeError.__super__ = Error;
 js__$Boot_HaxeError.prototype = $extend(Error.prototype,{
+	__class__: js__$Boot_HaxeError
 });
 var js_Boot = function() { };
 js_Boot.__name__ = true;
+js_Boot.getClass = function(o) {
+	if((o instanceof Array) && o.__enum__ == null) return Array; else {
+		var cl = o.__class__;
+		if(cl != null) return cl;
+		var name = js_Boot.__nativeClassName(o);
+		if(name != null) return js_Boot.__resolveNativeClass(name);
+		return null;
+	}
+};
 js_Boot.__string_rec = function(o,s) {
 	if(o == null) return "null";
 	if(s.length >= 5) return "<...>";
@@ -1485,6 +1557,61 @@ js_Boot.__string_rec = function(o,s) {
 		return String(o);
 	}
 };
+js_Boot.__interfLoop = function(cc,cl) {
+	if(cc == null) return false;
+	if(cc == cl) return true;
+	var intf = cc.__interfaces__;
+	if(intf != null) {
+		var _g1 = 0;
+		var _g = intf.length;
+		while(_g1 < _g) {
+			var i = _g1++;
+			var i1 = intf[i];
+			if(i1 == cl || js_Boot.__interfLoop(i1,cl)) return true;
+		}
+	}
+	return js_Boot.__interfLoop(cc.__super__,cl);
+};
+js_Boot.__instanceof = function(o,cl) {
+	if(cl == null) return false;
+	switch(cl) {
+	case Int:
+		return (o|0) === o;
+	case Float:
+		return typeof(o) == "number";
+	case Bool:
+		return typeof(o) == "boolean";
+	case String:
+		return typeof(o) == "string";
+	case Array:
+		return (o instanceof Array) && o.__enum__ == null;
+	case Dynamic:
+		return true;
+	default:
+		if(o != null) {
+			if(typeof(cl) == "function") {
+				if(o instanceof cl) return true;
+				if(js_Boot.__interfLoop(js_Boot.getClass(o),cl)) return true;
+			} else if(typeof(cl) == "object" && js_Boot.__isNativeObj(cl)) {
+				if(o instanceof cl) return true;
+			}
+		} else return false;
+		if(cl == Class && o.__name__ != null) return true;
+		if(cl == Enum && o.__ename__ != null) return true;
+		return o.__enum__ == cl;
+	}
+};
+js_Boot.__nativeClassName = function(o) {
+	var name = js_Boot.__toStr.call(o).slice(8,-1);
+	if(name == "Object" || name == "Function" || name == "Math" || name == "JSON") return null;
+	return name;
+};
+js_Boot.__isNativeObj = function(o) {
+	return js_Boot.__nativeClassName(o) != null;
+};
+js_Boot.__resolveNativeClass = function(name) {
+	return (Function("return typeof " + name + " != \"undefined\" ? " + name + " : null"))();
+};
 var parameter_Interpolation = function() { };
 parameter_Interpolation.__name__ = true;
 var parameter_InterpolationNone = function() { };
@@ -1498,6 +1625,9 @@ parameter_InterpolationExponential.__name__ = true;
 parameter_InterpolationExponential.__interfaces__ = [parameter_Interpolation];
 var parameter_IMapping = function() { };
 parameter_IMapping.__name__ = true;
+parameter_IMapping.prototype = {
+	__class__: parameter_IMapping
+};
 var parameter_MapBool = function(min,max) {
 	this.min = min;
 	this.max = max;
@@ -1514,6 +1644,7 @@ parameter_MapBool.prototype = {
 	,toString: function() {
 		return "[MapBool]";
 	}
+	,__class__: parameter_MapBool
 };
 var parameter_MapIntExponential = function(min,max) {
 	if(max == null) max = 1;
@@ -1542,6 +1673,7 @@ parameter_MapIntExponential.prototype = {
 	,toString: function() {
 		return "[MapIntExponential] min:" + this.min + ", max:" + this.max;
 	}
+	,__class__: parameter_MapIntExponential
 };
 var parameter_MapIntLinear = function(min,max) {
 	if(max == null) max = 1;
@@ -1561,6 +1693,7 @@ parameter_MapIntLinear.prototype = {
 	,toString: function() {
 		return "[MapIntLinear] min:" + this.min + ", max:" + this.max;
 	}
+	,__class__: parameter_MapIntLinear
 };
 var parameter_MapFloatLinear = function(min,max) {
 	if(max == null) max = 1;
@@ -1580,6 +1713,7 @@ parameter_MapFloatLinear.prototype = {
 	,toString: function() {
 		return "[MapFloatLinear] min:" + this.min + ", max:" + this.max;
 	}
+	,__class__: parameter_MapFloatLinear
 };
 var parameter_MapFloatExponential = function(min,max) {
 	if(max == null) max = 1.0;
@@ -1608,6 +1742,7 @@ parameter_MapFloatExponential.prototype = {
 	,toString: function() {
 		return "[MapFloatExponential] min:" + this.min + ", max:" + this.max;
 	}
+	,__class__: parameter_MapFloatExponential
 };
 var parameter_ParameterBase = function(name,mapping) {
 	this.name = name;
@@ -1645,6 +1780,7 @@ parameter_ParameterBase.prototype = {
 	,toString: function() {
 		return "[Parameter] " + this.name + ", defaultValue:" + Std.string(this.defaultValue) + ", mapping:" + this.mapping.toString();
 	}
+	,__class__: parameter_ParameterBase
 };
 var parameter__$Parameter_Parameter_$Impl_$ = {};
 parameter__$Parameter_Parameter_$Impl_$.__name__ = true;
@@ -1792,6 +1928,7 @@ tones_AudioBase.prototype = {
 			} else j1++;
 		}
 	}
+	,__class__: tones_AudioBase
 };
 var tones_Samples = function(audioContext,destinationNode) {
 	this._buffer = null;
@@ -1837,9 +1974,48 @@ tones_Samples.prototype = $extend(tones_AudioBase.prototype,{
 		if(autoRelease) this.doRelease(id,releaseTime);
 		return id;
 	}
+	,__class__: tones_Samples
 });
 var tones_data_OscillatorTypeShim = function() { };
 tones_data_OscillatorTypeShim.__name__ = true;
+var tones_utils_AudioNodeRecorder = function(source,bufferSize,workerPath) {
+	if(workerPath == null) workerPath = "js/recorderWorker.js";
+	if(bufferSize == null) bufferSize = 4096;
+	var context = source.context;
+	this.node = context.createScriptProcessor(bufferSize,2,2);
+	this.worker = new Worker(workerPath);
+	this.recording = false;
+	this.wavEncoded = new hxsignal_impl_Signal1();
+	this.bufferExported = new hxsignal_impl_Signal1();
+	this.worker.postMessage({ command : "init", config : { sampleRate : context.sampleRate}});
+	this.worker.onmessage = $bind(this,this.onWorkerMessage);
+	this.node.onaudioprocess = $bind(this,this.onAudioProcess);
+	source.connect(this.node);
+	this.node.connect(context.destination);
+};
+tones_utils_AudioNodeRecorder.__name__ = true;
+tones_utils_AudioNodeRecorder.forceDownload = function(blob,filename) {
+	if(filename == null) filename = "output.wav";
+	var doc = window.document;
+	var link = doc.createElement("a");
+	link.href = URL.createObjectURL(blob);
+	link.download = filename;
+	var click = doc.createEvent("Event");
+	click.initEvent("click",true,true);
+	link.dispatchEvent(click);
+};
+tones_utils_AudioNodeRecorder.prototype = {
+	onWorkerMessage: function(e) {
+		if(js_Boot.__instanceof(e.data,Blob)) this.wavEncoded.emit(e.data); else if((e.data instanceof Array) && e.data.__enum__ == null) this.bufferExported.emit(e.data); else throw new js__$Boot_HaxeError("Unexpected message data");
+	}
+	,onAudioProcess: function(e) {
+		if(!this.recording) return;
+		tones_utils_AudioNodeRecorder.RecordBufferMessage.buffer[0] = e.inputBuffer.getChannelData(0);
+		tones_utils_AudioNodeRecorder.RecordBufferMessage.buffer[1] = e.inputBuffer.getChannelData(1);
+		this.worker.postMessage(tones_utils_AudioNodeRecorder.RecordBufferMessage);
+	}
+	,__class__: tones_utils_AudioNodeRecorder
+};
 var tones_utils_TimeUtil = function() { };
 tones_utils_TimeUtil.__name__ = true;
 tones_utils_TimeUtil.get_frameTick = function() {
@@ -1867,8 +2043,17 @@ util_WebFontEmbed.load = function() {
 };
 var $_, $fid = 0;
 function $bind(o,m) { if( m == null ) return null; if( m.__id__ == null ) m.__id__ = $fid++; var f; if( o.hx__closures__ == null ) o.hx__closures__ = {}; else f = o.hx__closures__[m.__id__]; if( f == null ) { f = function(){ return f.method.apply(f.scope, arguments); }; f.scope = o; f.method = m; o.hx__closures__[m.__id__] = f; } return f; }
+String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;
+var Int = { __name__ : ["Int"]};
+var Dynamic = { __name__ : ["Dynamic"]};
+var Float = Number;
+Float.__name__ = ["Float"];
+var Bool = Boolean;
+Bool.__ename__ = ["Bool"];
+var Class = { __name__ : ["Class"]};
+var Enum = { };
 var node = window.OscillatorNode;
 if(node != null) {
 	if(Object.prototype.hasOwnProperty.call(node,"SINE")) {
@@ -1882,5 +2067,9 @@ window.requestAnimationFrame(tones_utils_TimeUtil.onFrame);
 drums_DrumSequencer.filenames = ["Kick01","Snare01","Snare02","Rim01","Rim02","Clave01","Clave02","Cowbell"];
 drums_DrumSequencer.trackNames = ["Kick","Snare 1","Snare 2","Rim 1","Rim 2","Clave 1","Clave 2","Cowbell"];
 haxe_ds_ObjectMap.count = 0;
+js_Boot.__toStr = {}.toString;
+tones_utils_AudioNodeRecorder.RecordBufferMessage = { command : "record", buffer : []};
+tones_utils_AudioNodeRecorder.EncodeWAVMessage = { command : "exportWAV", type : "audio/wav"};
+tones_utils_AudioNodeRecorder.ClearBufferMessage = { command : "clear"};
 Main.main();
 })(typeof console != "undefined" ? console : {log:function(){}});
