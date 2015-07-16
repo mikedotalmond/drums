@@ -39,11 +39,12 @@ class BeatLines extends Container {
 		for (i in 0...stepCount) tick(i);
 
 		TimeUtil.frameTick.connect(update);
+		//visible = false;
 	}
 
 	public function tick(index:Int) {
 		if (index < 0) return;
-		drawLine(lines[index], lineWidthForStep(index) * 3);
+		drawLine(lines[index], 4 * 4);// lineWidthForStep(index) * 4);
 	}
 
 
@@ -51,9 +52,9 @@ class BeatLines extends Container {
 		for (i in 0...stepCount) {
 			var gfx = lines[i];
 			var currentWidth = gfx.width;
-			var targetWidth = lineWidthForStep(i);
+			var targetWidth = 1;// lineWidthForStep(i);
 			if (currentWidth > targetWidth) {
-				var w = currentWidth - (currentWidth - targetWidth) * .2;
+				var w = currentWidth - (currentWidth - targetWidth) * .15;
 				drawLine(gfx, w);
 			}
 		}
@@ -69,8 +70,8 @@ class BeatLines extends Container {
 
 
 	function lineWidthForStep(index:Int) {
-		return 	(index % 4 == 0) ? 6 :
-				(index % 2 == 0) ? 3 :
-				1;
+		return 	(index % 4 == 0) ? 12 :
+				(index % 2 == 0) ? 6 :
+				3;
 	}
 }

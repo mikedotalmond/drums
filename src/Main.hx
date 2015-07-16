@@ -62,30 +62,30 @@ class Main extends Application {
 		});
 
 
-		var floatTest = new Parameter<Float, InterpolationLinear>('Parameter<Float,InterpolationLinear> test', 0,3.141);
-		var floatTest2 = new Parameter<Float, InterpolationExponential>('Parameter<Float,InterpolationExponential> test 2', 0,3.141);
-
-		trace(floatTest.mapping);
-		floatTest.setValue(.5,true);
-		trace(floatTest.getValue());
-		trace(floatTest.getValue(true));
-		trace(floatTest2);
-		floatTest2.setValue(.5,true);
-		trace(floatTest2.getValue());
-		trace(floatTest2.getValue(true));
-		//
-		//
-		var intTest = new Parameter<Int, InterpolationLinear>('Parameter<Int,InterpolationLinear> test', -10, 10);
-		var intTest2 = new Parameter<Int, InterpolationExponential>('Parameter<Int,InterpolationExponential> test', -10, 10);
-		intTest.setDefault(0);
-		trace(intTest);
-		trace(intTest2);
-		trace(intTest.toString());
-		trace(intTest2.toString());
-		//
-		var boolTest = new Parameter<Bool, InterpolationNone>('Parameter<Bool> test', false, true);
-		trace(boolTest);
-		trace(boolTest.toString());
+		//var floatTest = new Parameter<Float, InterpolationLinear>('Parameter<Float,InterpolationLinear> test', 0,3.141);
+		//var floatTest2 = new Parameter<Float, InterpolationExponential>('Parameter<Float,InterpolationExponential> test 2', 0,3.141);
+//
+		//trace(floatTest.mapping);
+		//floatTest.setValue(.5,true);
+		//trace(floatTest.getValue());
+		//trace(floatTest.getValue(true));
+		//trace(floatTest2);
+		//floatTest2.setValue(.5,true);
+		//trace(floatTest2.getValue());
+		//trace(floatTest2.getValue(true));
+		////
+		////
+		//var intTest = new Parameter<Int, InterpolationLinear>('Parameter<Int,InterpolationLinear> test', -10, 10);
+		//var intTest2 = new Parameter<Int, InterpolationExponential>('Parameter<Int,InterpolationExponential> test', -10, 10);
+		//intTest.setDefault(0);
+		//trace(intTest);
+		//trace(intTest2);
+		//trace(intTest.toString());
+		//trace(intTest2.toString());
+		////
+		//var boolTest = new Parameter<Bool, InterpolationNone>('Parameter<Bool> test', false, true);
+		//trace(boolTest);
+		//trace(boolTest.toString());
 	}
 
 
@@ -94,7 +94,7 @@ class Main extends Application {
 		audioContext = AudioBase.createContext();
 		
 		outGain = audioContext.createGain();
-		outGain.gain.value = .2;
+		outGain.gain.value = .25;
 		outGain.connect(audioContext.destination);
 
 		drums = new DrumSequencer(audioContext, outGain);
@@ -127,8 +127,11 @@ class Main extends Application {
 
 	function onDrumsReady() {
 		ready = true;
-		drums.bpm = 60 + Math.random() * 80;
+		Browser.document.getElementById('load-spinner').remove();
+		drums.bpm = 60 + Math.random() * 120;
+		drums.swing = Math.random()*.5;
 		drums.play(0);
+		stage.visible = true;
 	}
 	
 	var randomise:Bool = true;
@@ -154,18 +157,33 @@ class Main extends Application {
 
 	function initPixi() {
 
-		backgroundColor = 0x333333;
+		backgroundColor = 0x242627;
 		antialias = true;
 		onUpdate = tick;
 		onResize = stageResized;
-
-		start(Application.AUTO);
-
+		
+		width = 898;
+		height = 480;
+		
+		start(Application.AUTO, false, Browser.document.getElementById('pixi-container'));
+		stage.visible = false;
+		stage.x = 1;
 		// Ubuntu - 300,400,700
-		var txt = new Text('drums', {font : '300 12px Ubuntu', fill : 'white', align : 'left'});
-		stage.addChild(txt);
-		txt.position.x = 10;
-		txt.position.y = 10;
+		//var txt = new Text('drums', {font : '300 12px Ubuntu', fill : 'white', align : 'left'});
+		//stage.addChild(txt);
+		//txt.position.x = 10;
+		//txt.position.y = 10;
+		//_onWindowResize(null);
+	}
+	
+	override function _onWindowResize(event:Event) {
+		width = 898;
+		height = 480;
+		//height = Browser.window.innerHeight;
+		renderer.resize(width, height);
+		canvas.style.width = width + "px";
+		canvas.style.height = height + "px";
+		if (onResize != null) onResize();
 	}
 
 
@@ -196,13 +214,14 @@ class Main extends Application {
 
 
 	function stageResized() {
+		
 		var w2 = (width / 2);
-		var h2 = (height / 2);// - 40;
+		var h2 = (height / 2);
 
-		sequenceGrid.x = Math.round(w2 - beatLines.displayWidth / 2) + SequenceGrid.cellSize / 2;
-		sequenceGrid.y = Math.round(h2 - sequenceGrid.displayHeight / 2) + SequenceGrid.cellSize / 2;
-
-		beatLines.displayHeight = Math.round(height);
+		sequenceGrid.x = 26;
+		sequenceGrid.y = 26;
+		
+		beatLines.displayHeight = Math.round(height-40);
 		beatLines.position.x = sequenceGrid.x;
 		beatLines.position.y = 0;
 

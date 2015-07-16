@@ -163,7 +163,7 @@ class AudioBase {
 
 
 	/**
-	 * Stop and disconnect nodes after release completes
+	 * Stop and disconnect nodes (called after release completes)
 	 * @param	id
 	 */
 	public function doStop(id:Int) {

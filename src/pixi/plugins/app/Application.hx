@@ -157,14 +157,15 @@ class Application {
 	 * Can be found in libs folder. "libs/stats.min.js" <script type="text/javascript" src="libs/stats.min.js"></script>
 	 * @param [parentDom] - By default canvas will be appended to body or it can be appended to custom element if passed
 	 */
-	public function start(?renderer:String = AUTO, ?stats:Bool = true, ?parentDom:Element) {
+	public function start(?renderer:String = AUTO, ?stats:Bool = true, ?parentDom:Element = null) {
+		
 		canvas = Browser.document.createCanvasElement();
 		canvas.style.width = width + "px";
 		canvas.style.height = height + "px";
 		canvas.style.position = "absolute";
-		if (parentDom == null) Browser.document.body.appendChild(canvas);
-		else parentDom.appendChild(canvas);
-
+		
+		if (parentDom == null) parentDom = Browser.document.body;
+		
 		stage = new Container();
 
 		var renderingOptions:RenderingOptions = {};
@@ -180,7 +181,8 @@ class Application {
 		else if (renderer == CANVAS) this.renderer = new CanvasRenderer(width, height, renderingOptions);
 		else this.renderer = new WebGLRenderer(width, height, renderingOptions);
 
-		Browser.document.body.appendChild(this.renderer.view);
+		parentDom.appendChild(this.renderer.view);
+		
 		if (autoResize) Browser.window.onresize = _onWindowResize;
 		TimeUtil.frameTick.connect(onRequestAnimationFrame);
 		lastTime = Browser.window.performance.now();

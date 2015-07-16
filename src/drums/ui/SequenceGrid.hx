@@ -118,17 +118,31 @@ class SequenceGrid extends Container {
 	public function update(dt) {
 		var c;
 		var cell;
+		var active;
 		var tracks = drums.tracks;
 		var targetSize = cellSize / 1.25;
 
 		for (i in 0...trackCount) {
 			for (j in 0...stepCount) {
+				
 				cell = cells[i][j];
-				if (cell.width > targetSize) {
-					var size = Std.int(cell.width - (cell.width-targetSize) * .15);
-					drawCell(cell, size, 0xffffff);
+				active = tracks[i].events[j].active;
+				
+				var w = cell.width;
+				if (active && w > targetSize) {
+					
+					var p = ((w / targetSize) - 1) * 4;
+					
+					var targetIntensity = 0x30;
+					var intensity = targetIntensity + Std.int((0xff-targetIntensity) * p);
+					
+					var size = (w - (w - targetSize) * .1);
+					if (p < .001) size = targetSize;
+					
+					drawCell(cell, size, intensity | intensity << 8 | intensity << 16 );
+					
 				} else {
-					c = (tracks[i].events[j].active) ? 0xffffff : 0x121212;
+					c = (active) ? 0x303030: 0x121212;
 					if (cell.lineColor != c) {
 						cell.lineColor = c; // use to store the colour once set - prevent drawing the same thing again and again
 						drawCell(cell, targetSize, c);

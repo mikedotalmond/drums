@@ -50,7 +50,7 @@ class DrumSequencer {
 	public function new(audioContext:AudioContext=null, destination:AudioNode=null) {
 
 		bpm = 120;
-		swing = 1/3;
+		swing = 0;
 
 		playing = false;
 
@@ -83,8 +83,12 @@ class DrumSequencer {
 
 
 	public function toggleEvent(trackIndex:Int, tickIndex:Int) {
-		var e = tracks[trackIndex].events[tickIndex];
+		var track = tracks[trackIndex];
+		
+		var e = track.events[tickIndex];
 		e.active = !e.active;
+		
+		if (!e.active && e.id != -1) track.source.doStop(e.id);
 	}
 
 
@@ -186,7 +190,7 @@ class DrumSequencer {
 				s.duration = event.duration;
 				s.playbackRate = event.rate;
 				track.pan = event.pan;
-				s.playSample(null, time - context.currentTime);
+				event.id = s.playSample(null, time - context.currentTime);
 			}
 		}
 	}
@@ -239,7 +243,7 @@ class Track {
 		source.buffer = buffer;
 
 		events = [for (i in 0...stepCount)
-			{ active:false, volume:1, pan:0, rate:1, attack:0, release:buffer.duration, offset:0, duration:buffer.duration }
+			{ active:false, id:-1, volume:1, pan:0, rate:1, attack:0, release:buffer.duration, offset:0, duration:buffer.duration }
 		];
 	}
 
@@ -288,6 +292,7 @@ class Track {
 
 
 typedef TrackEvent = {
+	var id:Int;
 	var active:Bool;
 	var volume:Float;
 	var pan:Float;

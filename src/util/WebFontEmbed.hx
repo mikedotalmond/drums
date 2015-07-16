@@ -20,6 +20,7 @@ class WebFontEmbed {
 
 		var config = {
 			google: { families: ['Ubuntu:300,400,700'] },
+			//google: { families: ['Roboto:300,400,500,700'] },
 			active: loaded
 		};
 

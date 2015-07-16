@@ -6,14 +6,103 @@
 	<meta name="description" content="A drum step-sequencer" />
 	<meta name="keywords" content="Haxe, Web Audio, pixi.js, drums, step-sequencer" />
 	<script src="js/pixi.min.js"></script>
+	
+	<!--mdl-->
+	<link rel="stylesheet" href="css/material.min.css">
+	<link rel="stylesheet" href="https://storage.googleapis.com/code.getmdl.io/1.0.0/material.teal-light_blue.min.css" /> 
+	
+	<script src="js/material.min.js"></script>
+	<link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+	<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet" type="text/css">
+	
 	<style>
-		html,body{
-			padding:0px;
-			margin:0px;
+		body {
+			background-color: #242627;
 		}
+	
+		#pixi-container {
+			width:898px;
+			height:480px;
+			margin: 0 auto;
+			transform: translateZ(0); /*fix compositing*/
+		}
+		
+		button.iconbutton {
+			height: 48px;
+			min-width: 48px;
+			padding: 0;
+		}
+		
+		button.iconbutton i {
+			font-size: 48px;
+			position: relative;
+			top: 0px;
+		}
+		
+		.spin-container {
+			width: 28px;
+			height: 28px;
+			margin: 258px auto;
+		}
+		
 	</style>
 </head>
 <body>
+		
+	<!-- Always shows a header, even in smaller screens. -->
+	<div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+	  <header class="mdl-layout__header" style="background-color: #242627;">
+		<div class="mdl-layout__header-row">
+			<!-- Title -->
+			<span class="mdl-layout-title">drums</span>
+			
+			<!-- Add spacer, to align navigation to the right -->
+			<div class="mdl-layout-spacer"></div>		 
+			<!-- Navigation. We hide it in small screens. -->
+			<nav class="mdl-navigation mdl-layout--large-screen-only">
+				<a class="mdl-navigation__link" href="">Link</a>
+			</nav>
+		</div>
+	  </header>
+	  <div class="mdl-layout__drawer">
+		<span class="mdl-layout-title">drums</span>
+		<nav class="mdl-navigation">
+		  <a class="mdl-navigation__link" href="">Link</a>
+		</nav>
+	  </div>
+		
+	  <main class="mdl-layout__content">
+		<div class="page-content"><!-- Your content goes here -->
+			
+			<div class="mdl-grid" style="padding-bottom: 0px;">
+				
+				<div class="mdl-cell mdl-cell--12-col" style="margin-bottom: 0px;">
+					
+					<div id="load-spinner" class="spin-container">
+						<div class="mdl-spinner mdl-spinner--single-color mdl-js-spinner is-active"></div>
+					</div>
+					<div id="pixi-container"></div>
+				</div>
+				
+			</div>
+			
+			<div style="width: 100%; height: 8px; background-color: rgb(0, 150, 136);"></div>
+			
+			<div class="mdl-grid">
+				<button class="iconbutton mdl-button mdl-js-button mdl-button--primary  mdl-js-ripple-effect">
+					<i class="material-icons ">play_circle_outline</i> 
+				</button>	
+				<button class="iconbutton mdl-button mdl-js-button mdl-button--accent  mdl-js-ripple-effect">
+					<i class="material-icons ">play_circle_outline</i> 
+				</button>	
+				<button class="iconbutton mdl-button mdl-js-button mdl-js-ripple-effect">
+					<i class="material-icons ">play_circle_outline</i> 
+				</button>	
+			</div>
+		</div>
+	  </main>
+	</div>
+	
 	<script src="js/drums.js"></script>
 </body>
 </html>
