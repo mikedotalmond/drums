@@ -157,13 +157,13 @@ class Main extends Application {
 
 	function initPixi() {
 
-		backgroundColor = 0x242627;
+		backgroundColor = 0x191B1C;// 0x242627;
 		antialias = true;
 		onUpdate = tick;
 		onResize = stageResized;
 		
 		width = 898;
-		height = 480;
+		height = 445;
 		
 		start(Application.AUTO, false, Browser.document.getElementById('pixi-container'));
 		stage.visible = false;
@@ -178,7 +178,7 @@ class Main extends Application {
 	
 	override function _onWindowResize(event:Event) {
 		width = 898;
-		height = 480;
+		height = 445;
 		//height = Browser.window.innerHeight;
 		renderer.resize(width, height);
 		canvas.style.width = width + "px";
