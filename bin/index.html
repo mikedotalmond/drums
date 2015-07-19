@@ -52,23 +52,24 @@
 			min-width:950px;
 			margin: 32px auto;
 		}
-		.controls div{
-			height:52px;
-			background-color:#121212;
-			margin-bottom:4px;
-		}
+		
 		
 		.bpm-slider .mdl-slider__container {
-			top: 5px;
+			top: 11px;
+		}
+		
+		.bpm-slider p {
+			line-height: 40px;
+			margin: 0;
 		}
 		
 		.controls-grid {
 			background-color: rgb(32, 34, 36);
-			padding-bottom: 0px;
-			height:52px;
+			/*padding-bottom: 0px;
+			height:51px;*/
 		}
 		.controls-grid > .mdl-cell {
-			margin-bottom: 4px;
+			white-space:nowrap;
 		}
 		.controls div.panel {
 			position:relative;
@@ -77,6 +78,8 @@
 		.controls p.track-label {
 			padding-left: 14px;
 			padding-top: 14px;
+			padding-bottom: 14px;
+			margin-bottom: 4px;
 		}
 		.controls div.panel span {
 			position: absolute;
@@ -128,19 +131,20 @@
 			<div class="mdl-grid controls-grid">
 				
 				<div class="mdl-cell mdl-cell--1-col ">
-					<button id="play-button" style="top:-6px; " class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
+					<button id="play-button" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
 						<i class="material-icons ">play_arrow</i>
 					</button>
-					<button id="stop-button" style="top:-6px; display:none;" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
+					<button id="stop-button" style="display:none;" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
 						<i class="material-icons ">stop</i>
 					</button>
 					<div class="mdl-tooltip" for="play-button">Play</div>
 					<div class="mdl-tooltip" for="stop-button">Stop</div>
 				</div>
 				<div class="mdl-cell mdl-cell--1-col ">
-					<button id="record-button" style="top:-6px;" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
+					<button id="record-button" style="float:left" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
 						<i class="material-icons ">album</i>
 					</button>
+					<p style="float:right;line-height: 40px; margin-bottom: 0px; display:none;" class="">00:00</p>
 					<div class="mdl-tooltip" for="record-button">Record</div>
 				</div>				
 				
@@ -160,10 +164,10 @@
 				<div class="mdl-layout-spacer"></div>	
 				
 				<div class="mdl-cell mdl-cell--3-col bpm-slider">
-					<button id="mute-button" style="float:right; top:-6px; " class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
+					<button id="mute-button" style="float:right;" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
 						<i class="material-icons ">volume_up</i>
 					</button>	
-					<button id="unmute-button" style="float:right; top:-6px; display:none;" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
+					<button id="unmute-button" style="float:right; display:none;" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
 						<i class="material-icons ">volume_off</i>
 					</button>
 					<div class="mdl-tooltip" for="mute-button">Mute</div>
