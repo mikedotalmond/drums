@@ -128,17 +128,20 @@
 			<div class="mdl-grid controls-grid">
 				
 				<div class="mdl-cell mdl-cell--1-col ">
-					<button style="top:-6px; " class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
+					<button id="play-button" style="top:-6px; " class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
 						<i class="material-icons ">play_arrow</i>
 					</button>
-					<button style="top:-6px; display:none;" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
+					<button id="stop-button" style="top:-6px; display:none;" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
 						<i class="material-icons ">stop</i>
 					</button>
+					<div class="mdl-tooltip" for="play-button">Play</div>
+					<div class="mdl-tooltip" for="stop-button">Stop</div>
 				</div>
 				<div class="mdl-cell mdl-cell--1-col ">
-					<button style="top:-6px;" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
+					<button id="record-button" style="top:-6px;" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
 						<i class="material-icons ">album</i>
 					</button>
+					<div class="mdl-tooltip" for="record-button">Record</div>
 				</div>				
 				
 				<div class="mdl-layout-spacer"></div>	
@@ -157,9 +160,15 @@
 				<div class="mdl-layout-spacer"></div>	
 				
 				<div class="mdl-cell mdl-cell--3-col bpm-slider">
-					<button style="float:right; top:-6px; " class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
+					<button id="mute-button" style="float:right; top:-6px; " class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
 						<i class="material-icons ">volume_up</i>
-					</button> 
+					</button>	
+					<button id="unmute-button" style="float:right; top:-6px; display:none;" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
+						<i class="material-icons ">volume_off</i>
+					</button>
+					<div class="mdl-tooltip" for="mute-button">Mute</div>
+					<div class="mdl-tooltip" for="unmute-button">Unmute</div>
+					
 					<label for="volume-slider"><p style="float:left;">Volume</p></label>
 					<input class="mdl-slider mdl-js-slider" type="range" id="volume-slider" min="0" max="1" value="0.2" step="0.01" />
 					<div class="mdl-tooltip" for="volume-slider">0.2</div>
@@ -171,9 +180,27 @@
 			</div>
 			
 			<div class="mdl-grid sequencer-grid">
+				
+				<div class="mdl-tooltip" for="mute-1">Mute</div><div class="mdl-tooltip" for="solo-1">Solo</div><div class="mdl-tooltip" for="shuffle-1">Randomise</div>
+				
 				<div class="mdl-cell controls" style="width:calc(100% - 930px);">
 					<div class="panel">
-						<p class="track-label">Label</p>
+						<p class="track-label">Kick</p>
+						<span>
+							<button id="shuffle-1" class="mdl-button mdl-js-button mdl-button--icon">
+							  <i class="material-icons">shuffle</i>
+							</button>
+							<button id="mute-1" class="mdl-button mdl-js-button mdl-button--icon">
+							  <i class="material-icons">not_interested</i>
+							</button>
+							<button id="solo-1" class="mdl-button mdl-js-button mdl-button--icon /*mdl-button--colored*/">
+							  <i class="material-icons">play_circle_outline</i>
+							</button>
+						</span>
+							
+					</div>
+					<div class="panel">
+						<p class="track-label">Snare 01</p>
 						<span>
 							<button class="mdl-button mdl-js-button mdl-button--icon">
 							  <i class="material-icons">not_interested</i>
@@ -184,7 +211,7 @@
 						</span>
 					</div>
 					<div class="panel">
-						<p class="track-label">Label</p>
+						<p class="track-label">Snare 02</p>
 						<span>
 							<button class="mdl-button mdl-js-button mdl-button--icon">
 							  <i class="material-icons">not_interested</i>
@@ -195,7 +222,7 @@
 						</span>
 					</div>
 					<div class="panel">
-						<p class="track-label">Label</p>
+						<p class="track-label">Rim 01</p>
 						<span>
 							<button class="mdl-button mdl-js-button mdl-button--icon">
 							  <i class="material-icons">not_interested</i>
@@ -206,51 +233,7 @@
 						</span>
 					</div>
 					<div class="panel">
-						<p class="track-label">Label</p>
-						<span>
-							<button class="mdl-button mdl-js-button mdl-button--icon">
-							  <i class="material-icons">not_interested</i>
-							</button>
-							<button class="mdl-button mdl-js-button mdl-button--icon /*mdl-button--colored*/">
-							  <i class="material-icons">play_circle_outline</i>
-							</button>
-						</span>
-					</div>
-					<div class="panel">
-						<p class="track-label">Label</p>
-						<span>
-							<button class="mdl-button mdl-js-button mdl-button--icon">
-							  <i class="material-icons">not_interested</i>
-							</button>
-							<button class="mdl-button mdl-js-button mdl-button--icon /*mdl-button--colored*/">
-							  <i class="material-icons">play_circle_outline</i>
-							</button>
-						</span>
-					</div>
-					<div class="panel">
-						<p class="track-label">Label</p>
-						<span>
-							<button class="mdl-button mdl-js-button mdl-button--icon">
-							  <i class="material-icons">not_interested</i>
-							</button>
-							<button class="mdl-button mdl-js-button mdl-button--icon /*mdl-button--colored*/">
-							  <i class="material-icons">play_circle_outline</i>
-							</button>
-						</span>
-					</div>
-					<div class="panel">
-						<p class="track-label">Label</p>
-						<span>
-							<button class="mdl-button mdl-js-button mdl-button--icon">
-							  <i class="material-icons">not_interested</i>
-							</button>
-							<button class="mdl-button mdl-js-button mdl-button--icon /*mdl-button--colored*/">
-							  <i class="material-icons">play_circle_outline</i>
-							</button>
-						</span>
-					</div>
-					<div class="panel">
-						<p class="track-label">Label</p>
+						<p class="track-label">Rim 02</p>
 						<span>
 							<button class="mdl-button mdl-js-button mdl-button--icon">
 							  <i class="material-icons">not_interested</i>
@@ -261,6 +244,39 @@
 						</span>
 					</div>
 					
+					<div class="panel">
+						<p class="track-label">Clave 01</p>
+						<span>
+							<button class="mdl-button mdl-js-button mdl-button--icon">
+							  <i class="material-icons">not_interested</i>
+							</button>
+							<button class="mdl-button mdl-js-button mdl-button--icon /*mdl-button--colored*/">
+							  <i class="material-icons">play_circle_outline</i>
+							</button>
+						</span>
+					</div>
+					<div class="panel">
+						<p class="track-label">Clave 02</p>
+						<span>
+							<button class="mdl-button mdl-js-button mdl-button--icon">
+							  <i class="material-icons">not_interested</i>
+							</button>
+							<button class="mdl-button mdl-js-button mdl-button--icon /*mdl-button--colored*/">
+							  <i class="material-icons">play_circle_outline</i>
+							</button>
+						</span>
+					</div>
+					<div class="panel">
+						<p class="track-label">Cowbell</p>
+						<span>
+							<button class="mdl-button mdl-js-button mdl-button--icon">
+							  <i class="material-icons">not_interested</i>
+							</button>
+							<button class="mdl-button mdl-js-button mdl-button--icon /*mdl-button--colored*/">
+							  <i class="material-icons">play_circle_outline</i>
+							</button>
+						</span>
+					</div>
 					
 				</div>
 				
