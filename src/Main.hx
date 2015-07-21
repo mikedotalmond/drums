@@ -3,6 +3,7 @@ package;
 import drums.ui.BeatLines;
 import drums.DrumSequencer;
 import drums.Oscilliscope;
+import drums.ui.Controls;
 import drums.ui.SequenceGrid;
 import input.KeyCodes;
 import js.Browser;
@@ -44,6 +45,7 @@ class Main extends Application {
 
 		ready = false;
 
+		initUI();
 		initAudio();
 		initPixi();
 
@@ -60,32 +62,12 @@ class Main extends Application {
 					else drums.play();
 			}
 		});
-
-
-		//var floatTest = new Parameter<Float, InterpolationLinear>('Parameter<Float,InterpolationLinear> test', 0,3.141);
-		//var floatTest2 = new Parameter<Float, InterpolationExponential>('Parameter<Float,InterpolationExponential> test 2', 0,3.141);
-//
-		//trace(floatTest.mapping);
-		//floatTest.setValue(.5,true);
-		//trace(floatTest.getValue());
-		//trace(floatTest.getValue(true));
-		//trace(floatTest2);
-		//floatTest2.setValue(.5,true);
-		//trace(floatTest2.getValue());
-		//trace(floatTest2.getValue(true));
-		////
-		////
-		//var intTest = new Parameter<Int, InterpolationLinear>('Parameter<Int,InterpolationLinear> test', -10, 10);
-		//var intTest2 = new Parameter<Int, InterpolationExponential>('Parameter<Int,InterpolationExponential> test', -10, 10);
-		//intTest.setDefault(0);
-		//trace(intTest);
-		//trace(intTest2);
-		//trace(intTest.toString());
-		//trace(intTest2.toString());
-		////
-		//var boolTest = new Parameter<Bool, InterpolationNone>('Parameter<Bool> test', false, true);
-		//trace(boolTest);
-		//trace(boolTest.toString());
+	}
+	
+	function initUI() {
+		
+		controls = new Controls();
+		
 	}
 
 
@@ -135,6 +117,7 @@ class Main extends Application {
 	}
 	
 	var randomise:Bool = true;
+	var controls:drums.ui.Controls;
 	function toggleRandomise() {
 		randomise = !randomise;
 		trace('randomise:$randomise');
