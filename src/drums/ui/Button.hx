@@ -23,7 +23,6 @@ class LabelButton extends Button {
 	public function new(width:Int, height:Int, text:String) {
 		super(width, height);
 
-		// Ubuntu - 300,400,700
 		label = new Text(text,
 		{
 			font : '400 20px Roboto', fill : 'white', align : 'center',

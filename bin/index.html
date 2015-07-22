@@ -11,88 +11,14 @@
 	<link rel="stylesheet" href="css/material.min.css"> 
 	<link rel="stylesheet" href="https://storage.googleapis.com/code.getmdl.io/1.0.0/material.blue-pink.min.css" /> 
 	
+	<link rel="stylesheet" href="css/drums.min.css">
+	<link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+		
 	<script src="js/material.min.js"></script>
 	<script src="js/jquery-2.1.4.min.js"></script>
-	<link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
-	<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet" type="text/css">
 	
-	<style>
-		body {
-			color: #aaa;
-			background-color: #191B1C;
-		}
-	
-		#pixi-container {
-			width:898px;
-			height:445px;
-			margin: 0 auto;
-			position:relative;
-			transform: translateZ(0); /*fix compositing*/
-		}
-		
-		button.iconbutton {
-			height: 48px;
-			min-width: 48px;
-		}
-		
-		button.iconbutton i {
-			font-size: 48px;
-			position: relative;
-			top: 0px;
-		}
-		
-		.spin-container {
-			width: 28px;
-			height: 28px;
-			margin: 208px auto;
-			padding-left: 14px;
-		}
-		
-		.page-content {
-			max-width:1280px;
-			min-width:950px;
-			margin: 32px auto;
-		}
-		
-		
-		.bpm-slider .mdl-slider__container {
-			top: 11px;
-		}
-		
-		.bpm-slider p {
-			line-height: 40px;
-			margin: 0;
-		}
-		
-		.controls-grid {
-			background-color: rgb(32, 34, 36);
-			/*padding-bottom: 0px;
-			height:51px;*/
-		}
-		.controls-grid > .mdl-cell {
-			white-space:nowrap;
-		}
-		.controls div.tracks-panel {
-			position:relative;
-			background-color:#16181A;
-		}
-		
-		.controls p.track-label {
-			padding-left: 14px;
-			padding-top: 14px;
-			padding-bottom: 14px;
-			margin-bottom: 4px;
-		}
-		.controls div.tracks-panel span {
-			position: absolute;
-			top: 10px;		
-			right: 16px;
-		}
-		
-		.sequencer-grid {
-			background-color: rgb(18, 19, 20);
-		}
-	</style>
+	<!--fonts are loaded by the app code - drums setup begins after fonts have loaded -->
+	<!--link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet" type="text/css"-->
 </head>
 <body>
 		
@@ -132,10 +58,10 @@
 			<div class="mdl-grid controls-grid">
 				
 				<div class="mdl-cell mdl-cell--1-col ">
-					<button id="play-button" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary">
+					<button id="play-button" style="display:none;" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary">
 						<i class="material-icons ">play_arrow</i>
 					</button>
-					<button id="stop-button" style="display:none;" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary">
+					<button id="stop-button" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary">
 						<i class="material-icons ">stop</i>
 					</button>
 					<div class="mdl-tooltip" for="play-button">Play</div>
@@ -208,7 +134,7 @@
 							  <i class="material-icons">not_interested</i>
 							</button>
 							<button id="track-solo-0" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
-							  <i class="material-icons">play_circle_outline</i>
+							  <i class="material-icons">radio_button_checked</i>
 							</button>
 						</span>
 					</div>
@@ -222,7 +148,7 @@
 							  <i class="material-icons">not_interested</i>
 							</button>
 							<button id="track-solo-1" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
-							  <i class="material-icons">play_circle_outline</i>
+							  <i class="material-icons">radio_button_checked</i>
 							</button>
 						</span>
 					</div>
@@ -236,7 +162,7 @@
 							  <i class="material-icons">not_interested</i>
 							</button>
 							<button id="track-solo-2" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
-							  <i class="material-icons">play_circle_outline</i>
+							  <i class="material-icons">radio_button_checked</i>
 							</button>
 						</span>
 					</div>
@@ -250,7 +176,7 @@
 							  <i class="material-icons">not_interested</i>
 							</button>
 							<button id="track-solo-3" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
-							  <i class="material-icons">play_circle_outline</i>
+							  <i class="material-icons">radio_button_checked</i>
 							</button>
 						</span>
 					</div>
@@ -264,7 +190,7 @@
 							  <i class="material-icons">not_interested</i>
 							</button>
 							<button id="track-solo-4" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
-							  <i class="material-icons">play_circle_outline</i>
+							  <i class="material-icons">radio_button_checked</i>
 							</button>
 						</span>
 					</div>
@@ -278,7 +204,7 @@
 							  <i class="material-icons">not_interested</i>
 							</button>
 							<button id="track-solo-5" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
-							  <i class="material-icons">play_circle_outline</i>
+							  <i class="material-icons">radio_button_checked</i>
 							</button>
 						</span>
 					</div>
@@ -292,7 +218,7 @@
 							  <i class="material-icons">not_interested</i>
 							</button>
 							<button id="track-solo-6" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
-							  <i class="material-icons">play_circle_outline</i>
+							  <i class="material-icons">radio_button_checked</i>
 							</button>
 						</span>
 					</div>
@@ -306,7 +232,7 @@
 							  <i class="material-icons">not_interested</i>
 							</button>
 							<button id="track-solo-7" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
-							  <i class="material-icons">play_circle_outline</i>
+							  <i class="material-icons">radio_button_checked</i>
 							</button>
 						</span>
 					</div>

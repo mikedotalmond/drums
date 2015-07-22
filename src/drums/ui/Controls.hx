@@ -1,75 +1,130 @@
 package drums.ui;
-import js.Browser;
-import js.JQuery;
-/**
- * ...
- * @author ...
- */
-class Controls {
-	var playButton:js.JQuery;
-	var stopButton:js.JQuery;
-	var randomButton:js.JQuery;
-	var recordButton:js.JQuery;
-	var muteButton:js.JQuery;
-	var unmuteButton:js.JQuery;
-	var bpmSlider:js.JQuery;
-	var swingSlider:js.JQuery;
-	var volumeSlider:js.JQuery;
 
+import js.Browser;
+import js.html.InputElement;
+import js.JQuery;
+import js.JQuery.JqEvent;
+
+import parameter.Mapping.InterpolationExponential;
+import parameter.Mapping.InterpolationLinear;
+import parameter.Mapping.InterpolationNone;
+import parameter.Parameter;
+
+class Controls {
+	
+	public var playToggle		:Parameter<Bool,InterpolationNone>;
+	public var randomModeToggle	:Parameter<Bool,InterpolationNone>;
+	public var recordToggle		:Parameter<Bool,InterpolationNone>;
+	public var muteToggle		:Parameter<Bool,InterpolationNone>;
+
+	public var bpm				:Parameter<Int, InterpolationLinear>;
+	public var swing			:Parameter<Float, InterpolationLinear>;
+	public var volume			:Parameter<Float, InterpolationExponential>;
+	
+	
 	public function new() {
+		setupControlBar();
+		setupTracks();
+	}
+	
+	
+	function setupControlBar() {
+		var byId = Browser.document.getElementById;
 		
-		playButton = new JQuery('#play-button');
-		stopButton = new JQuery('#stop-button');
-		
-		playButton.on('click tap',  function(_) {
-			playButton.css( { display:'none' } );
-			stopButton.css( { display:'' } );
+		//
+		playToggle = new Parameter<Bool,InterpolationNone>('playToggle', true, false);
+		playToggle.addObserver(function(p) {
+			var state = p.getValue();
+			byId('play-button').style.display = state ? 'none' : '';
+			byId('stop-button').style.display = state ? '' : 'none';
 		});
-		stopButton.on('click tap',  function(_) {
-			stopButton.css( { display:'none' } );
-			playButton.css( { display:'' } );
+		new JQuery('#play-button').on('click tap',  function(_) { playToggle.setValue(true); });
+		new JQuery('#stop-button').on('click tap',  function(_) { playToggle.setValue(false); });
+		
+		
+		//
+		var randomButton = byId('shuffle-button');
+		randomModeToggle = new Parameter<Bool,InterpolationNone>('randomModeToggle', false, true);
+		randomModeToggle.addObserver(function(p) {
+			if (p.getValue()) randomButton.classList.add('mdl-button--accent');
+			else randomButton.classList.remove('mdl-button--accent');
 		});
+		new JQuery(randomButton).on('click tap',  function(_) { randomModeToggle.setValue(!randomModeToggle.getValue()); });
 		
-		randomButton = new JQuery('#shuffle-button');
-		recordButton = new JQuery('#record-button');
 		
-		randomButton.on('click tap',  function(_) {
-			randomButton.toggleClass('mdl-button--accent');
+		//
+		var recordButton =  byId('record-button');
+		recordToggle = new Parameter<Bool,InterpolationNone>('recordToggle', false, true);
+		recordToggle.addObserver(function(p) {
+			if (p.getValue()) recordButton.classList.add('mdl-button--accent');
+			else recordButton.classList.remove('mdl-button--accent');
 		});
-		recordButton.on('click tap',  function(_) {
-			recordButton.toggleClass('mdl-button--accent');
+		new JQuery(recordButton).on('click tap',  function(_) { recordToggle.setValue(!recordToggle.getValue()); });
+		
+		
+		
+		//
+		var bpmSlider:InputElement = cast byId('bpm-slider');
+		bpm = new Parameter<Int,InterpolationLinear>('bpmSlider', Std.parseInt(bpmSlider.min), Std.parseInt(bpmSlider.max));
+		bpm.addObserver(function(p) {
+			var val = p.getValue();
+			untyped bpmSlider.MaterialSlider.change(val);
+			new JQuery(bpmSlider).parent().siblings('div[for="bpm-slider"]').text('${val}');
 		});
+		new JQuery('#bpm-slider').on('change', function(_) { bpm.setValue(Std.int(bpmSlider.valueAsNumber)); });
+		bpm.setDefault(Std.int(bpmSlider.valueAsNumber));
 		
-		muteButton = new JQuery('#mute-button');
-		unmuteButton = new JQuery('#unmute-button');
 		
-		muteButton.on('click tap',  function(_) {
-			muteButton.css( { display:'none' } );
-			unmuteButton.css( { display:'' } );
+		//new JQuery('#swing-slider').on('change', onSwingSliderChange);
+		var swingSlider:InputElement = cast byId('swing-slider');
+		swing = new Parameter<Float, InterpolationLinear>('swingSlider', Std.parseInt(swingSlider.min), Std.parseFloat(swingSlider.max));
+		swing.addObserver(function(p) {
+			var val = p.getValue();
+			untyped swingSlider.MaterialSlider.change(val);
+			new JQuery(swingSlider).parent().siblings('div[for="swing-slider"]').text('${val*100}%');
 		});
-		unmuteButton.on('click tap',  function(_) {
-			unmuteButton.css( { display:'none' } );
-			muteButton.css( { display:'' } );
+		new JQuery('#swing-slider').on('change', function(_) { swing.setValue(swingSlider.valueAsNumber); });
+		swing.setDefault(swingSlider.valueAsNumber);
+		
+		
+		
+		var volumeSlider:InputElement = cast byId('volume-slider');
+		volume = new Parameter<Float, InterpolationExponential>('volumeSlider', Std.parseInt(volumeSlider.min), Std.parseFloat(volumeSlider.max));
+		volume.addObserver(function(p) {
+			var normValue = p.getValue(true);
+			untyped volumeSlider.MaterialSlider.change(normValue);
+			new JQuery(volumeSlider).parent().siblings('div[for="volume-slider"]').text('${normValue}');
 		});
+		new JQuery('#volume-slider').on('change', function(_) { volume.setValue(volumeSlider.valueAsNumber, true); });
+		volume.setDefault(volumeSlider.valueAsNumber, true);
 		
-		bpmSlider = new JQuery('#bpm-slider');
-		swingSlider = new JQuery('#swing-slider');
-		volumeSlider = new JQuery('#volume-slider');
 		
-		bpmSlider.on('change', onBPMSliderChange);
-		swingSlider.on('change', onSwingSliderChange);
-		volumeSlider.on('change', onVolumeSliderChange);
-		
+		//
+		muteToggle = new Parameter<Bool,InterpolationNone>('muteToggle', false, true);
+		muteToggle.addObserver(function(p) {
+			var state = p.getValue();
+			if (state) untyped volumeSlider.MaterialSlider.disable();
+			else untyped volumeSlider.MaterialSlider.enable();
+			byId('mute-button').style.display = state ? 'none' : '';
+			byId('unmute-button').style.display = state ? '' : 'none';
+		});
+		new JQuery('#mute-button').on('click tap',  function(_) { muteToggle.setValue(true); });
+		new JQuery('#unmute-button').on('click tap',  function(_) { muteToggle.setValue(false); });
+	}
+	
+	
+	
+	function setupTracks() {
 		var button;
 		for (i in 0...8) {
-			///*
+			
 			button = new JQuery('#track-shuffle-$i');
 			button.on('click tap', onTrackShuffle.bind(i, _));
 			
 			new JQuery('#track-mute-$i').on('click tap', function(e) {
 				var button = new JQuery('#track-mute-$i');
 				button.toggleClass('mdl-button--accent'); 
-				onTrackMute(i, button.hasClass('mdl-button--accent'));
+				onTrackMute(i, button.hasClass('mdl-button--accent'));				
 			});
 			
 			new JQuery('#track-solo-$i').on('click tap', function(e) {
@@ -80,20 +135,7 @@ class Controls {
 		}
 	}
 	
-	function onVolumeSliderChange(_) {
-		var val = Std.parseFloat(volumeSlider.val());
-		volumeSlider.parent().siblings('div[for="volume-slider"]').text('$val');
-	}
 	
-	function onSwingSliderChange(_) {
-		var val = Std.parseFloat(swingSlider.val());
-		swingSlider.parent().siblings('div[for="swing-slider"]').text('${val*100}%');
-	}
-	
-	function onBPMSliderChange(_) {
-		var val = Std.parseFloat(bpmSlider.val());
-		bpmSlider.parent().siblings('div[for="bpm-slider"]').text('$val');
-	}
 	
 	function onTrackSolo(index:Int, state:Bool) {
 		trace(index, state);
@@ -106,33 +148,4 @@ class Controls {
 	function onTrackShuffle(index:Int, _) {
 		trace(index);
 	}
-	
-	
-
-
-		//var floatTest = new Parameter<Float, InterpolationLinear>('Parameter<Float,InterpolationLinear> test', 0,3.141);
-		//var floatTest2 = new Parameter<Float, InterpolationExponential>('Parameter<Float,InterpolationExponential> test 2', 0,3.141);
-		//
-		//trace(floatTest.mapping);
-		//floatTest.setValue(.5,true);
-		//trace(floatTest.getValue());
-		//trace(floatTest.getValue(true));
-		//trace(floatTest2);
-		//floatTest2.setValue(.5,true);
-		//trace(floatTest2.getValue());
-		//trace(floatTest2.getValue(true));
-		////
-		////
-		//var intTest = new Parameter<Int, InterpolationLinear>('Parameter<Int,InterpolationLinear> test', -10, 10);
-		//var intTest2 = new Parameter<Int, InterpolationExponential>('Parameter<Int,InterpolationExponential> test', -10, 10);
-		//intTest.setDefault(0);
-		//trace(intTest);
-		//trace(intTest2);
-		//trace(intTest.toString());
-		//trace(intTest2.toString());
-		////
-		//var boolTest = new Parameter<Bool, InterpolationNone>('Parameter<Bool> test', false, true);
-		//trace(boolTest);
-		//trace(boolTest.toString());
-	
 }

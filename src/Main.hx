@@ -9,6 +9,7 @@ import input.KeyCodes;
 import js.Browser;
 import js.html.*;
 import js.html.audio.*;
+import js.JQuery;
 import parameter.Mapping;
 import parameter.Mapping.Interpolation;
 import parameter.Mapping.InterpolationNone;
@@ -208,9 +209,8 @@ class Main extends Application {
 
 
 	static function main() {
-		new Main();
 		// start up once fonts have loaded
-		//WebFontEmbed.loaded = function() new Main();
-		//WebFontEmbed.load();
+		WebFontEmbed.loaded = function() new Main();
+		WebFontEmbed.load();
 	}
 }
