@@ -197,7 +197,7 @@ class CellUI extends Graphics {
 		x = target.x;
 		y = target.y;
 
-		beginFill(0x2DBEEE, 0.25);
+		beginFill(0x2196f3, 0.25);
 		drawRect(-cellSize/2, -cellSize/2, cellSize, cellSize);
 		endFill();
 
@@ -218,11 +218,11 @@ class CellUI extends Graphics {
 		var pp = p * p;
 		var ppp = pp * p;
 
-		beginFill(0x2DBEff, .25+ppp*.25);
+		beginFill(0x2196f3, .25+ppp*.25);
 		drawRect(-cellSize/2, -cellSize/2, cellSize, cellSize);
 		endFill();
 
-		beginFill(0x2DBEff, pp);
+		beginFill(0x2196f3, pp);
 		drawRect(-cellSize/2, -cellSize/2, pp * cellSize, cellSize);
 		endFill();
 	}
@@ -232,7 +232,7 @@ class CellUI extends Graphics {
 
 		isDown = false;
 
-		beginFill(0x2DBEff, 1);
+		beginFill(0x2196f3, 1);
 		drawRect(-cellSize/2, -cellSize/2, cellSize, cellSize);
 		endFill();
 

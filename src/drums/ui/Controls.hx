@@ -6,13 +6,20 @@ import js.JQuery;
  * @author ...
  */
 class Controls {
+	var playButton:js.JQuery;
+	var stopButton:js.JQuery;
+	var randomButton:js.JQuery;
+	var recordButton:js.JQuery;
+	var muteButton:js.JQuery;
+	var unmuteButton:js.JQuery;
+	var bpmSlider:js.JQuery;
+	var swingSlider:js.JQuery;
+	var volumeSlider:js.JQuery;
 
 	public function new() {
 		
-		var playButton = new JQuery('#play-button');
-		var stopButton = new JQuery('#stop-button');
-		var randomButton = new JQuery('#shuffle-button');
-		var recordButton = new JQuery('#record-button');
+		playButton = new JQuery('#play-button');
+		stopButton = new JQuery('#stop-button');
 		
 		playButton.on('click tap',  function(_) {
 			playButton.css( { display:'none' } );
@@ -23,28 +30,81 @@ class Controls {
 			playButton.css( { display:'' } );
 		});
 		
+		randomButton = new JQuery('#shuffle-button');
+		recordButton = new JQuery('#record-button');
+		
 		randomButton.on('click tap',  function(_) {
-			randomButton.toggleClass('mdl-button--primary');
+			randomButton.toggleClass('mdl-button--accent');
 		});
 		recordButton.on('click tap',  function(_) {
-			recordButton.toggleClass('mdl-button--primary');
+			recordButton.toggleClass('mdl-button--accent');
 		});
 		
-		/*
+		muteButton = new JQuery('#mute-button');
+		unmuteButton = new JQuery('#unmute-button');
 		
-		'bpm-slider'
-		'swing-slider'
-		'volume-slider'
-		'mute-button'
-		'unmute-button'
+		muteButton.on('click tap',  function(_) {
+			muteButton.css( { display:'none' } );
+			unmuteButton.css( { display:'' } );
+		});
+		unmuteButton.on('click tap',  function(_) {
+			unmuteButton.css( { display:'none' } );
+			muteButton.css( { display:'' } );
+		});
 		
-		'track-shuffle-$i'
-		'track-mute-$i'
-		'track-solo-$i'
-		*/
+		bpmSlider = new JQuery('#bpm-slider');
+		swingSlider = new JQuery('#swing-slider');
+		volumeSlider = new JQuery('#volume-slider');
 		
-		/*mdl-button--primary */
-		/*mdl-button--colored*/
+		bpmSlider.on('change', onBPMSliderChange);
+		swingSlider.on('change', onSwingSliderChange);
+		volumeSlider.on('change', onVolumeSliderChange);
+		
+		var button;
+		for (i in 0...8) {
+			///*
+			button = new JQuery('#track-shuffle-$i');
+			button.on('click tap', onTrackShuffle.bind(i, _));
+			
+			new JQuery('#track-mute-$i').on('click tap', function(e) {
+				var button = new JQuery('#track-mute-$i');
+				button.toggleClass('mdl-button--accent'); 
+				onTrackMute(i, button.hasClass('mdl-button--accent'));
+			});
+			
+			new JQuery('#track-solo-$i').on('click tap', function(e) {
+				var button = new JQuery('#track-solo-$i');
+				button.toggleClass('mdl-button--accent'); 
+				onTrackSolo(i, button.hasClass('mdl-button--accent'));
+			});
+		}
+	}
+	
+	function onVolumeSliderChange(_) {
+		var val = Std.parseFloat(volumeSlider.val());
+		volumeSlider.parent().siblings('div[for="volume-slider"]').text('$val');
+	}
+	
+	function onSwingSliderChange(_) {
+		var val = Std.parseFloat(swingSlider.val());
+		swingSlider.parent().siblings('div[for="swing-slider"]').text('${val*100}%');
+	}
+	
+	function onBPMSliderChange(_) {
+		var val = Std.parseFloat(bpmSlider.val());
+		bpmSlider.parent().siblings('div[for="bpm-slider"]').text('$val');
+	}
+	
+	function onTrackSolo(index:Int, state:Bool) {
+		trace(index, state);
+	}
+	
+	function onTrackMute(index:Int, state:Bool) {
+		trace(index, state);
+	}
+	
+	function onTrackShuffle(index:Int, _) {
+		trace(index);
 	}
 	
 	

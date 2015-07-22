@@ -2,7 +2,7 @@ package drums.ui;
 import drums.DrumSequencer;
 import drums.DrumSequencer.TrackEvent;
 import drums.ui.Button;
-import drums.ui.CellInfoPanel;
+import drums.ui.celledit.CellInfoPanel;
 import drums.ui.celledit.OscilliscopePanel;
 import drums.ui.celledit.WaveformPanel;
 import drums.ui.UIElement;
@@ -30,7 +30,6 @@ class CellEditPanel extends Container {
 
 	var trackIndex:Int;
 	var tickIndex:Int;
-	var tickPulse:Float = 1.0;
 	var event:TrackEvent;
 
 	var uiContainer:Container;
@@ -108,7 +107,6 @@ class CellEditPanel extends Container {
 	public function tick(index:Int) {
 		if (index == tickIndex && event.active) {
 			waveform.play(event.duration);
-			tickPulse = 1.00725;
 		}
 	}
 
@@ -134,17 +132,6 @@ class CellEditPanel extends Container {
 					fadeUI = false;
 				}
 			}
-
-			// pulse with ticks for this cell
-			if (tickPulse > 1) {
-
-				tickPulse *= .9995;
-				if (tickPulse < 1) tickPulse = 1;
-
-				bg.pivot.set(bg.width / 2, bg.height / 2);
-				bg.position.set(bg.width / 2, bg.height / 2);
-				bg.scale.set(tickPulse, tickPulse);
-			}
 		}
 	}
 
@@ -161,7 +148,7 @@ class CellEditPanel extends Container {
 		var w = Main.displayWidth - (inset + inset);
 		var h = Main.displayHeight - (inset + inset);
 
-		bg.beginFill(0x006088);
+		bg.beginFill(0x0C80DE);
 		bg.drawRect(x,y,w,h);
 		bg.endFill();
 
@@ -209,7 +196,7 @@ class CellEditPanel extends Container {
 		if (size == 1) {
 			// pixi mouse events don't work on graphics drawn at negative values..?
 			// so for final draw, start at 0,0 and fill the whole display
-			bg.beginFill(0x2DBEff);
+			bg.beginFill(0x2196f3);
 			bg.drawRect(-SequenceGrid.xStep/2, -SequenceGrid.yStep/2, Main.displayWidth, Main.displayHeight);
 			bg.endFill();
 			return;
@@ -228,7 +215,7 @@ class CellEditPanel extends Container {
 		left = ((-startX * size) - SequenceGrid.xStep + SequenceGrid.xStep / 2) * size;
 		up = ((-startY * size) - SequenceGrid.yStep + SequenceGrid.yStep / 2) * size;
 
-		bg.beginFill(0x2DBEff, size);
+		bg.beginFill(0x2196f3, size);
 
 		// down / right
 		bg.drawRect(startX, startY, right, down);
@@ -245,6 +232,5 @@ class CellEditPanel extends Container {
 
 	inline function playNow():Void {
 		drums.playTrackCellNow(trackIndex, tickIndex);
-		tickPulse = 1.00725;
 	}
 }

@@ -1,4 +1,4 @@
-package drums.ui;
+package drums.ui.celledit;
 import pixi.core.text.Text;
 
 /**
@@ -17,17 +17,17 @@ class CellInfoPanel extends UIElement {
 		super(210, 84);
 
 		// Ubuntu - 300,400,700
-		cellIndex = new Text('01', { font : '400 20px Ubuntu', fill : '#00ffbe', align:'center',
+		cellIndex = new Text('01', { font : '400 20px Roboto', fill : '#00ffbe', align:'center',
 			dropShadow:true, dropShadowAngle:0, dropShadowDistance:1, dropShadowColor:'#008ECC'
 		});
 
 		cellIndex.position.set(15, 10);
 
-		trackName = new Text('Cowbell', { font : '400 26px Ubuntu', fill : 'white', align : 'center',
+		trackName = new Text('Cowbell', { font : '400 26px Roboto', fill : 'white', align : 'center',
 			dropShadow:true, dropShadowAngle:0, dropShadowDistance:1, dropShadowColor:'#008ECC'
 		});
 
-		duration = new Text('00.000 s', { font : '400 16px Ubuntu', fill : 'white', align : 'center',
+		duration = new Text('00.000 s', { font : '400 16px Roboto', fill : 'white', align : 'center',
 			dropShadow:true, dropShadowAngle:0, dropShadowDistance:1, dropShadowColor:'#008ECC'
 		});
 
@@ -44,7 +44,7 @@ class CellInfoPanel extends UIElement {
 		cellIndex.text = jj < 10 ? '0$jj/16': '$jj/16';
 
 		duration.text = '${floatToStringPrecision(track.source.duration,4)}';
-		duration.position.set(195 - duration.width, 48);
+		duration.position.set(195 - duration.width, 50);
 
 		trackName.text = track.name;
 		trackName.position.set(15, 40);

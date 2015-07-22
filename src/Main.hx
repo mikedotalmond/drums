@@ -108,12 +108,13 @@ class Main extends Application {
 
 
 	function onDrumsReady() {
+		trace('ready');
 		ready = true;
 		Browser.document.getElementById('load-spinner').remove();
+		Browser.document.getElementById('pixi-container').style.display = '';
 		drums.bpm = 60 + Math.random() * 120;
 		drums.swing = Math.random()*.5;
 		drums.play(0);
-		stage.visible = true;
 	}
 	
 	var randomise:Bool = true;
@@ -149,14 +150,7 @@ class Main extends Application {
 		height = 445;
 		
 		start(Application.AUTO, false, Browser.document.getElementById('pixi-container'));
-		stage.visible = false;
 		stage.x = 1;
-		// Ubuntu - 300,400,700
-		//var txt = new Text('drums', {font : '300 12px Ubuntu', fill : 'white', align : 'left'});
-		//stage.addChild(txt);
-		//txt.position.x = 10;
-		//txt.position.y = 10;
-		//_onWindowResize(null);
 	}
 	
 	override function _onWindowResize(event:Event) {
@@ -214,8 +208,9 @@ class Main extends Application {
 
 
 	static function main() {
+		new Main();
 		// start up once fonts have loaded
-		WebFontEmbed.loaded = function() new Main();
-		WebFontEmbed.load();
+		//WebFontEmbed.loaded = function() new Main();
+		//WebFontEmbed.load();
 	}
 }

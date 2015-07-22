@@ -8,8 +8,8 @@
 	<script src="js/pixi.min.js"></script>
 	
 	<!--mdl-->
-	<link rel="stylesheet" href="css/material.min.css">
-	<link rel="stylesheet" href="https://storage.googleapis.com/code.getmdl.io/1.0.0/material.pink-light_green.min.css" /> 
+	<link rel="stylesheet" href="css/material.min.css"> 
+	<link rel="stylesheet" href="https://storage.googleapis.com/code.getmdl.io/1.0.0/material.blue-pink.min.css" /> 
 	
 	<script src="js/material.min.js"></script>
 	<script src="js/jquery-2.1.4.min.js"></script>
@@ -147,8 +147,6 @@
 					</button>
 					<div class="mdl-tooltip" for="shuffle-button">Random</div>
 				</div>	
-					
-				<div class="mdl-layout-spacer"></div>	
 				
 				<div class="mdl-cell mdl-cell--1-col ">
 					<button id="record-button" style="float:left" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-js-ripple-effect">
@@ -161,7 +159,7 @@
 				
 				<div class="mdl-cell mdl-cell--3-col bpm-slider">
 					<label for="bpm-slider"><p style="float:left;">BPM</p></label>
-					<input class="mdl-slider mdl-js-slider" type="range" id="bpm-slider" min="60" max="200" value="120" step="1" />
+					<input class="mdl-slider mdl-js-slider " type="range" id="bpm-slider" min="60" max="200" value="120" step="1" />
 					<div class="mdl-tooltip" for="bpm-slider">120</div>
 				</div>
 				<div class="mdl-cell mdl-cell--2-col bpm-slider">
@@ -203,13 +201,13 @@
 					<div class="tracks-panel">
 						<p class="track-label">Kick</p>
 						<span>
-							<button id="track-shuffle-0" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-shuffle-0" class="mdl-button mdl-js-button mdl-button--icon mdl-button--primary mdl-js-ripple-effect">
 							  <i class="material-icons">shuffle</i>
 							</button>
-							<button id="track-mute-0" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-mute-0" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">not_interested</i>
 							</button>
-							<button id="track-solo-0" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-solo-0" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">play_circle_outline</i>
 							</button>
 						</span>
@@ -217,13 +215,13 @@
 					<div class="tracks-panel">
 						<p class="track-label">Snare 01</p>
 						<span>
-							<button id="track-shuffle-1" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-shuffle-1" class="mdl-button mdl-js-button mdl-button--icon mdl-button--primary mdl-js-ripple-effect">
 							  <i class="material-icons">shuffle</i>
 							</button>
-							<button id="track-mute-1" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-mute-1" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">not_interested</i>
 							</button>
-							<button id="track-solo-1" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-solo-1" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">play_circle_outline</i>
 							</button>
 						</span>
@@ -231,13 +229,13 @@
 					<div class="tracks-panel">
 						<p class="track-label">Snare 02</p>
 						<span>
-							<button id="track-shuffle-2" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-shuffle-2" class="mdl-button mdl-js-button mdl-button--icon mdl-button--primary mdl-js-ripple-effect">
 							  <i class="material-icons">shuffle</i>
 							</button>
-							<button id="track-mute-2" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-mute-2" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">not_interested</i>
 							</button>
-							<button id="track-solo-2" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-solo-2" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">play_circle_outline</i>
 							</button>
 						</span>
@@ -245,13 +243,13 @@
 					<div class="tracks-panel">
 						<p class="track-label">Rim 01</p>
 						<span>
-							<button id="track-shuffle-3" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-shuffle-3" class="mdl-button mdl-js-button mdl-button--icon mdl-button--primary mdl-js-ripple-effect">
 							  <i class="material-icons">shuffle</i>
 							</button>
-							<button id="track-mute-3" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-mute-3" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">not_interested</i>
 							</button>
-							<button id="track-solo-3" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-solo-3" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">play_circle_outline</i>
 							</button>
 						</span>
@@ -259,13 +257,13 @@
 					<div class="tracks-panel">
 						<p class="track-label">Rim 02</p>
 						<span>
-							<button id="track-shuffle-4" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-shuffle-4" class="mdl-button mdl-js-button mdl-button--icon mdl-button--primary mdl-js-ripple-effect">
 							  <i class="material-icons">shuffle</i>
 							</button>
-							<button id="track-mute-4" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-mute-4" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">not_interested</i>
 							</button>
-							<button id="track-solo-4" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-solo-4" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">play_circle_outline</i>
 							</button>
 						</span>
@@ -273,13 +271,13 @@
 					<div class="tracks-panel">
 						<p class="track-label">Clave 01</p>
 						<span>
-							<button id="track-shuffle-5" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-shuffle-5" class="mdl-button mdl-js-button mdl-button--icon mdl-button--primary mdl-js-ripple-effect">
 							  <i class="material-icons">shuffle</i>
 							</button>
-							<button id="track-mute-5" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-mute-5" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">not_interested</i>
 							</button>
-							<button id="track-solo-5" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-solo-5" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">play_circle_outline</i>
 							</button>
 						</span>
@@ -287,13 +285,13 @@
 					<div class="tracks-panel">
 						<p class="track-label">Clave 02</p>
 						<span>
-							<button id="track-shuffle-6" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-shuffle-6" class="mdl-button mdl-js-button mdl-button--icon mdl-button--primary mdl-js-ripple-effect">
 							  <i class="material-icons">shuffle</i>
 							</button>
-							<button id="track-mute-6" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-mute-6" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">not_interested</i>
 							</button>
-							<button id="track-solo-6" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-solo-6" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">play_circle_outline</i>
 							</button>
 						</span>
@@ -301,13 +299,13 @@
 					<div class="tracks-panel">
 						<p class="track-label">Cowbell</p>
 						<span>
-							<button id="track-shuffle-7" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-shuffle-7" class="mdl-button mdl-js-button mdl-button--icon mdl-button--primary mdl-js-ripple-effect">
 							  <i class="material-icons">shuffle</i>
 							</button>
-							<button id="track-mute-7" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-mute-7" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">not_interested</i>
 							</button>
-							<button id="track-solo-7" class="mdl-button mdl-js-button mdl-button--icon">
+							<button id="track-solo-7" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect">
 							  <i class="material-icons">play_circle_outline</i>
 							</button>
 						</span>
@@ -315,11 +313,17 @@
 				</div>
 				
 				<div class="mdl-cell" style="width:898px;">
-					<div>
+					<div style="position: relative;">
 						<div id="load-spinner" class="spin-container">
 							<div class="mdl-spinner mdl-spinner--single-color mdl-js-spinner is-active"></div>
 						</div>
-						<div id="pixi-container"></div>
+						
+						<button id="close-cell-edit" style="display:none; position: absolute; right: -8px; top:-8px; z-index: 1;" 
+								class="mdl-button mdl-js-button mdl-button--icon mdl-button--fab mdl-button--accent mdl-js-ripple-effect">
+						  <i class="material-icons">clear</i>
+						</button>  
+						
+						<div id="pixi-container" style="display:none;"></div>
 					</div>					
 				</div>
 			</div>

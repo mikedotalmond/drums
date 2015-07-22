@@ -26,11 +26,11 @@ class LabelButton extends Button {
 		// Ubuntu - 300,400,700
 		label = new Text(text,
 		{
-			font : '400 20px Ubuntu', fill : 'white', align : 'center',
+			font : '400 20px Roboto', fill : 'white', align : 'center',
 			dropShadow:true, dropShadowAngle:0, dropShadowDistance:1, dropShadowColor:'#008ECC'
 		});
 
 		addChild(label);
-		label.position.set(Math.fround(90 / 2 - label.width / 2), Math.fround(84 / 2 - label.height / 2));
+		label.position.set(Math.fround(90 / 2 - label.width / 2), Math.fround(85 / 2 - label.height / 2));
 	}
 }

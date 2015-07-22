@@ -63,7 +63,7 @@ class BeatLines extends Container {
 
 	function drawLine(g:Graphics, w:Float) {
 		g.clear();
-		g.beginFill(0x00FFBE, 1);
+		g.beginFill(0x2196f3, 1);
 		g.drawRect((-w/2), 0, w, displayHeight);
 		g.endFill();
 	}

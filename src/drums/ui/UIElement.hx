@@ -20,7 +20,7 @@ class UIElement extends Container {
 
 	function drawBg(w:Int, h:Int):Void {
 		bg.clear();
-		bg.beginFill(0x2DBEFF);
+		bg.beginFill(0x2196f3);
 		bg.drawRect(0, 0, w, h);
 		bg.endFill();
 	}
