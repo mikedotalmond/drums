@@ -87,7 +87,7 @@ pixi_plugins_app_Application.prototype = {
 		this.canvas.style.width = this.width + "px";
 		this.canvas.style.height = this.height + "px";
 		this.canvas.style.position = "absolute";
-		if(parentDom == null) window.document.body.appendChild(this.canvas); else parentDom.appendChild(this.canvas);
+		if(parentDom == null) parentDom = window.document.body;
 		this.stage = new PIXI.Container();
 		var renderingOptions = { };
 		renderingOptions.view = this.canvas;
@@ -98,7 +98,7 @@ pixi_plugins_app_Application.prototype = {
 		renderingOptions.autoResize = this.autoResize;
 		renderingOptions.transparent = this.transparent;
 		if(renderer == "auto") this.renderer = PIXI.autoDetectRenderer(this.width,this.height,renderingOptions); else if(renderer == "canvas") this.renderer = new PIXI.CanvasRenderer(this.width,this.height,renderingOptions); else this.renderer = new PIXI.WebGLRenderer(this.width,this.height,renderingOptions);
-		window.document.body.appendChild(this.renderer.view);
+		parentDom.appendChild(this.renderer.view);
 		if(this.autoResize) window.onresize = $bind(this,this._onWindowResize);
 		tones_utils_TimeUtil.get_frameTick().connect($bind(this,this.onRequestAnimationFrame));
 		this.lastTime = window.performance.now();
@@ -146,43 +146,16 @@ pixi_plugins_app_Application.prototype = {
 	,__class__: pixi_plugins_app_Application
 };
 var Main = function() {
-	this.randomise = true;
-	var _g1 = this;
+	this.randomise = false;
 	pixi_plugins_app_Application.call(this);
 	this.ready = false;
+	this.controls = new drums_ui_Controls();
 	this.initAudio();
 	this.initPixi();
 	this.initBeatLines();
 	this.initStepGrid();
+	this.initControlRouting();
 	this.stageResized();
-	window.addEventListener("keydown",function(e) {
-		var _g = e.keyCode;
-		switch(_g) {
-		case 32:
-			if(_g1.drums.playing) _g1.drums.stop(); else _g1.drums.play();
-			break;
-		}
-	});
-	var floatTest = new parameter_ParameterBase("Parameter<Float,InterpolationLinear> test",parameter__$Parameter_Parameter_$Impl_$.getFloat(0,3.141));
-	var floatTest2 = new parameter_ParameterBase("Parameter<Float,InterpolationExponential> test 2",parameter__$Parameter_Parameter_$Impl_$.getFloatExponential(0,3.141));
-	console.log(floatTest.mapping);
-	floatTest.setValue(.5,true);
-	console.log(floatTest.getValue());
-	console.log(floatTest.getValue(true));
-	console.log(floatTest2);
-	floatTest2.setValue(.5,true);
-	console.log(floatTest2.getValue());
-	console.log(floatTest2.getValue(true));
-	var intTest = new parameter_ParameterBase("Parameter<Int,InterpolationLinear> test",parameter__$Parameter_Parameter_$Impl_$.getInt(-10,10));
-	var intTest2 = new parameter_ParameterBase("Parameter<Int,InterpolationExponential> test",parameter__$Parameter_Parameter_$Impl_$.getIntExponential(-10,10));
-	intTest.setDefault(0);
-	console.log(intTest);
-	console.log(intTest2);
-	console.log(intTest.toString());
-	console.log(intTest2.toString());
-	var boolTest = new parameter_ParameterBase("Parameter<Bool> test",parameter__$Parameter_Parameter_$Impl_$.getBool(false,true));
-	console.log(boolTest);
-	console.log(boolTest.toString());
 };
 Main.__name__ = true;
 Main.main = function() {
@@ -193,45 +166,96 @@ Main.main = function() {
 };
 Main.__super__ = pixi_plugins_app_Application;
 Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
-	initAudio: function() {
+	initControlRouting: function() {
+		var _g = this;
+		this.controls.bpm.addObserver(function(p) {
+			_g.drums.set_bpm(p.getValue());
+		});
+		this.controls.muteToggle.addObserver(function(p1) {
+			if(p1.getValue()) _g.outGain.gain.setValueAtTime(0,0); else _g.outGain.gain.setValueAtTime(_g.controls.volume.getValue(),0);
+		});
+		this.controls.playToggle.addObserver(function(p2) {
+			if(p2.getValue()) _g.drums.play(); else _g.drums.stop();
+		});
+		this.controls.randomModeToggle.addObserver(function(p3) {
+			_g.randomise = p3.getValue();
+		});
+		this.controls.recordToggle.addObserver(function(p4) {
+			if(p4.getValue()) {
+				console.log("recording...");
+				_g.recorder.worker.postMessage(tones_utils_AudioNodeRecorder.ClearBufferMessage);
+				_g.recorder.recording = true;
+			} else {
+				console.log("stopped recording");
+				_g.recorder.recording = false;
+				console.log("encoding wav");
+				_g.recorder.worker.postMessage(tones_utils_AudioNodeRecorder.EncodeWAVMessage);
+			}
+		});
+		this.controls.swing.addObserver(function(p5) {
+			_g.drums.set_swing(p5.getValue());
+		});
+		this.controls.volume.addObserver(function(p6) {
+			_g.outGain.gain.setValueAtTime(p6.getValue(),0);
+		});
+		this.controls.trackMute.connect(function(i,state) {
+			_g.drums.tracks[i].mute(state);
+		});
+		this.controls.trackShuffle.connect(function(i1) {
+			_g.drums.tracks[i1].randomise();
+		});
+		this.controls.trackSolo.connect(function(i2,state1) {
+			var tracks = _g.drums.tracks;
+			var soloTracks = _g.controls.soloTracks;
+			var soloCount = 0;
+			var _g1 = 0;
+			while(_g1 < soloTracks.length) {
+				var val = soloTracks[_g1];
+				++_g1;
+				soloCount += val;
+			}
+			var track;
+			var solo;
+			var _g11 = 0;
+			while(_g11 < 8) {
+				var j = _g11++;
+				track = tracks[j];
+				solo = soloTracks[j];
+				if(solo == 0 && soloCount > 0) track.otherSolo = true; else if(solo == 1 && soloCount > 1) track.otherSolo = true; else track.otherSolo = false;
+			}
+			tracks[i2].solo(state1);
+			var _g12 = 0;
+			while(_g12 < tracks.length) {
+				var track1 = tracks[_g12];
+				++_g12;
+				track1.updateOutputState();
+			}
+		});
+	}
+	,initAudio: function() {
 		this.audioContext = tones_AudioBase.createContext();
 		this.outGain = this.audioContext.createGain();
-		this.outGain.gain.value = .2;
+		this.outGain.gain.value = .25;
 		this.outGain.connect(this.audioContext.destination);
 		this.drums = new drums_DrumSequencer(this.audioContext,this.outGain);
 		this.drums.tick.connect($bind(this,this.onSequenceTick));
 		this.drums.ready.connect($bind(this,this.onDrumsReady));
 		this.recorder = new tones_utils_AudioNodeRecorder(this.drums.output);
 		this.recorder.wavEncoded.connect($bind(this,this.onOutputBufferEncoded));
-		var o = window;
-		o.startRecord = $bind(this,this.startRecord);
-		var o1 = window;
-		o1.stopRecord = $bind(this,this.stopRecord);
-		var o2 = window;
-		o2.toggleRandomise = $bind(this,this.toggleRandomise);
-	}
-	,startRecord: function() {
-		console.log("recording...");
-		this.recorder.worker.postMessage(tones_utils_AudioNodeRecorder.ClearBufferMessage);
-		this.recorder.recording = true;
-	}
-	,stopRecord: function() {
-		console.log("stopped recording");
-		this.recorder.recording = false;
-		this.recorder.worker.postMessage(tones_utils_AudioNodeRecorder.EncodeWAVMessage);
 	}
 	,onOutputBufferEncoded: function(data) {
 		console.log("Encoded wav - " + (data.size >> 10) / 1024 + " MB  (" + data.size + " bytes)");
 		tones_utils_AudioNodeRecorder.forceDownload(data);
 	}
 	,onDrumsReady: function() {
+		console.log("ready");
 		this.ready = true;
-		this.drums.set_bpm(60 + Math.random() * 80);
+		window.document.getElementById("load-spinner").remove();
+		window.document.getElementById("pixi-container").style.display = "";
+		this.controls.bpm.setValue(Math.round(60 + Math.random() * 120));
+		this.controls.swing.setValue(Math.random() * .5);
+		this.controls.volume.setValue(.5);
 		this.drums.play(0);
-	}
-	,toggleRandomise: function() {
-		this.randomise = !this.randomise;
-		console.log("randomise:" + Std.string(this.randomise));
 	}
 	,onSequenceTick: function(index,time) {
 		this.beatLines.tick(index);
@@ -255,15 +279,22 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 		}
 	}
 	,initPixi: function() {
-		this.backgroundColor = 3355443;
+		this.backgroundColor = 1645340;
 		this.antialias = true;
 		this.onUpdate = $bind(this,this.tick);
 		this.onResize = $bind(this,this.stageResized);
-		this.start("auto");
-		var txt = new PIXI.Text("drums",{ font : "300 12px Ubuntu", fill : "white", align : "left"});
-		this.stage.addChild(txt);
-		txt.position.x = 10;
-		txt.position.y = 10;
+		this.width = 898;
+		this.height = 445;
+		this.start("auto",false,window.document.getElementById("pixi-container"));
+		this.stage.x = 1;
+	}
+	,_onWindowResize: function(event) {
+		this.width = 898;
+		this.height = 445;
+		this.renderer.resize(this.width,this.height);
+		this.canvas.style.width = this.width + "px";
+		this.canvas.style.height = this.height + "px";
+		if(this.onResize != null) this.onResize();
 	}
 	,initBeatLines: function() {
 		this.beatLines = new drums_ui_BeatLines(900,448);
@@ -278,11 +309,9 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 		this.sequenceGrid.update(dt);
 	}
 	,stageResized: function() {
-		var w2 = this.width / 2;
-		var h2 = this.height / 2;
-		this.sequenceGrid.x = Math.round(w2 - this.beatLines.displayWidth / 2) + 26.;
-		this.sequenceGrid.y = Math.round(h2 - this.sequenceGrid.displayHeight / 2) + 26.;
-		this.beatLines.displayHeight = Math.round(this.height);
+		this.sequenceGrid.x = 26;
+		this.sequenceGrid.y = 26;
+		this.beatLines.displayHeight = Math.round(this.height - 40);
 		this.beatLines.position.x = this.sequenceGrid.x;
 		this.beatLines.position.y = 0;
 	}
@@ -296,9 +325,6 @@ Reflect.compare = function(a,b) {
 };
 var Std = function() { };
 Std.__name__ = true;
-Std.string = function(s) {
-	return js_Boot.__string_rec(s,"");
-};
 Std.parseInt = function(x) {
 	var v = parseInt(x,10);
 	if(v == 0 && (HxOverrides.cca(x,1) == 120 || HxOverrides.cca(x,1) == 88)) v = parseInt(x);
@@ -308,7 +334,7 @@ Std.parseInt = function(x) {
 var drums_DrumSequencer = function(audioContext,destination) {
 	this.tickIndex = -1;
 	this.set_bpm(120);
-	this.set_swing(0.33333333333333331);
+	this.set_swing(0);
 	this.playing = false;
 	this.context = audioContext == null?tones_AudioBase.createContext():audioContext;
 	this.output = this.context.createGain();
@@ -333,8 +359,10 @@ drums_DrumSequencer.prototype = {
 		this.timeTrack.removeAllTimedEvents();
 	}
 	,toggleEvent: function(trackIndex,tickIndex) {
-		var e = this.tracks[trackIndex].events[tickIndex];
+		var track = this.tracks[trackIndex];
+		var e = track.events[tickIndex];
 		e.active = !e.active;
+		if(!e.active && e.id != -1) track.source.doStop(e.id);
 	}
 	,loadSamples: function() {
 		var _g2 = this;
@@ -414,7 +442,7 @@ drums_DrumSequencer.prototype = {
 				s.duration = event.duration;
 				s.playbackRate = event.rate;
 				track.set_pan(event.pan);
-				s.playSample(null,time - this.context.currentTime);
+				event.id = s.playSample(null,time - this.context.currentTime);
 			}
 		}
 	}
@@ -429,11 +457,19 @@ drums_DrumSequencer.prototype = {
 	,__class__: drums_DrumSequencer
 };
 var drums_Track = function(name,buffer,context,destination) {
+	this.otherSolo = false;
+	this.isSolo = false;
+	this.isMuted = false;
+	this.outGain = 1;
 	this._pan = 0;
 	this.name = name;
+	this.outGain = 1.0;
+	this.gainNode = context.createGain();
+	this.gainNode.gain.value = this.outGain;
+	this.gainNode.connect(destination);
 	this.panNode = context.createPanner();
 	this.panNode.panningModel = "equalpower";
-	this.panNode.connect(destination);
+	this.panNode.connect(this.gainNode);
 	this.source = new tones_Samples(context,this.panNode);
 	this.source.set_attack(0);
 	this.source.set_buffer(buffer);
@@ -442,7 +478,7 @@ var drums_Track = function(name,buffer,context,destination) {
 	var _g1 = 0;
 	while(_g1 < 16) {
 		_g1++;
-		_g.push({ active : false, volume : 1, pan : 0, rate : 1, attack : 0, release : buffer.duration, offset : 0, duration : buffer.duration});
+		_g.push({ active : false, id : -1, volume : 1, pan : 0, rate : 1, attack : 0, release : buffer.duration, offset : 0, duration : buffer.duration});
 	}
 	tmp = _g;
 	this.events = tmp;
@@ -469,6 +505,18 @@ drums_Track.prototype = {
 			e.rate = rate;
 			e.release = buffer.duration / rate;
 		}
+	}
+	,mute: function(state) {
+		this.isMuted = state;
+		this.updateOutputState();
+	}
+	,solo: function(state) {
+		this.isSolo = state;
+		this.updateOutputState();
+	}
+	,updateOutputState: function() {
+		var val = this.isMuted?0:!this.otherSolo || this.isSolo?this.outGain:0;
+		this.gainNode.gain.setValueAtTime(val,0);
 	}
 	,set_pan: function(value) {
 		var x = value * 1.5707963267948966;
@@ -635,7 +683,7 @@ drums_ui_BeatLines.__super__ = PIXI.Container;
 drums_ui_BeatLines.prototype = $extend(PIXI.Container.prototype,{
 	tick: function(index) {
 		if(index < 0) return;
-		this.drawLine(this.lines[index],this.lineWidthForStep(index) * 3);
+		this.drawLine(this.lines[index],16);
 	}
 	,update: function(dt) {
 		var _g = 0;
@@ -643,21 +691,17 @@ drums_ui_BeatLines.prototype = $extend(PIXI.Container.prototype,{
 			var i = _g++;
 			var gfx = this.lines[i];
 			var currentWidth = gfx.width;
-			var targetWidth = this.lineWidthForStep(i);
-			if(currentWidth > targetWidth) {
-				var w = currentWidth - (currentWidth - targetWidth) * .2;
+			if(currentWidth > 1) {
+				var w = currentWidth - (currentWidth - 1) * .15;
 				this.drawLine(gfx,w);
 			}
 		}
 	}
 	,drawLine: function(g,w) {
 		g.clear();
-		g.beginFill(65470,1);
+		g.beginFill(2201331,1);
 		g.drawRect(-w / 2,0,w,this.displayHeight);
 		g.endFill();
-	}
-	,lineWidthForStep: function(index) {
-		return index % 4 == 0?6:index % 2 == 0?3:1;
 	}
 	,__class__: drums_ui_BeatLines
 });
@@ -673,7 +717,7 @@ drums_ui_UIElement.__super__ = PIXI.Container;
 drums_ui_UIElement.prototype = $extend(PIXI.Container.prototype,{
 	drawBg: function(w,h) {
 		this.bg.clear();
-		this.bg.beginFill(2998015);
+		this.bg.beginFill(2201331);
 		this.bg.drawRect(0,0,w,h);
 		this.bg.endFill();
 	}
@@ -691,9 +735,9 @@ drums_ui_Button.prototype = $extend(drums_ui_UIElement.prototype,{
 });
 var drums_ui_LabelButton = function(width,height,text) {
 	drums_ui_Button.call(this,width,height);
-	this.label = new PIXI.Text(text,{ font : "400 20px Ubuntu", fill : "white", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
+	this.label = new PIXI.Text(text,{ font : "400 20px Roboto", fill : "white", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
 	this.addChild(this.label);
-	this.label.position.set(Math.round(45. - this.label.width / 2),Math.round(42. - this.label.height / 2));
+	this.label.position.set(Math.round(45. - this.label.width / 2),Math.round(42.5 - this.label.height / 2));
 };
 drums_ui_LabelButton.__name__ = true;
 drums_ui_LabelButton.__super__ = drums_ui_Button;
@@ -701,7 +745,6 @@ drums_ui_LabelButton.prototype = $extend(drums_ui_Button.prototype,{
 	__class__: drums_ui_LabelButton
 });
 var drums_ui_CellEditPanel = function(drums1,pointer,displayWidth,displayHeight) {
-	this.tickPulse = 1.0;
 	this.closing = false;
 	this.launching = false;
 	this.fadeUI = false;
@@ -723,10 +766,7 @@ drums_ui_CellEditPanel.__name__ = true;
 drums_ui_CellEditPanel.__super__ = PIXI.Container;
 drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
 	onClick: function(target) {
-		if(target.parent == this) this.close(); else if(target.parent == this.uiContainer) {
-			this.drums.playTrackCellNow(this.trackIndex,this.tickIndex);
-			this.tickPulse = 1.00725;
-		}
+		if(target.parent == this) this.close(); else if(target.parent == this.uiContainer) this.drums.playTrackCellNow(this.trackIndex,this.tickIndex);
 	}
 	,edit: function(trackIndex,tickIndex) {
 		this.trackIndex = trackIndex;
@@ -749,10 +789,7 @@ drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
 		this.closed.emit();
 	}
 	,tick: function(index) {
-		if(index == this.tickIndex && this.event.active) {
-			this.waveform.play(this.event.duration);
-			this.tickPulse = 1.00725;
-		}
+		if(index == this.tickIndex && this.event.active) this.waveform.play(this.event.duration);
 	}
 	,update: function() {
 		if(!this.visible) return;
@@ -760,30 +797,21 @@ drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
 			this.bgSize += this.launching?.07:-.07;
 			if(this.bgSize >= 1) this.onLaunched(); else if(this.bgSize <= 0) this.onClosed();
 			this.drawBg(this.bgSize);
-		} else {
-			if(this.fadeUI && this.uiContainer.alpha < 1) {
-				this.uiContainer.alpha += .09;
-				if(this.uiContainer.alpha >= 1) {
-					this.uiContainer.alpha = 1;
-					this.fadeUI = false;
-				}
-			}
-			if(this.tickPulse > 1) {
-				this.tickPulse *= .9995;
-				if(this.tickPulse < 1) this.tickPulse = 1;
-				this.bg.pivot.set(this.bg.width / 2,this.bg.height / 2);
-				this.bg.position.set(this.bg.width / 2,this.bg.height / 2);
-				this.bg.scale.set(this.tickPulse,this.tickPulse);
+		} else if(this.fadeUI && this.uiContainer.alpha < 1) {
+			this.uiContainer.alpha += .09;
+			if(this.uiContainer.alpha >= 1) {
+				this.uiContainer.alpha = 1;
+				this.fadeUI = false;
 			}
 		}
 	}
 	,setupUI: function(pointer) {
 		this.uiContainer = new PIXI.Container();
 		var bg = new PIXI.Graphics();
-		bg.beginFill(24712);
+		bg.beginFill(819422);
 		bg.drawRect(-18.125,-18.,880,428);
 		bg.endFill();
-		this.cellInfo = new drums_ui_CellInfoPanel();
+		this.cellInfo = new drums_ui_celledit_CellInfoPanel();
 		this.playButton = new drums_ui_LabelButton(90,84,"Play");
 		this.playButton.position.set(225,0);
 		pointer.watch(this.playButton);
@@ -812,7 +840,7 @@ drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
 		this.bg.position.set(0,0);
 		this.bg.clear();
 		if(size == 1) {
-			this.bg.beginFill(2998015);
+			this.bg.beginFill(2201331);
 			this.bg.drawRect(-28.125,-28.,900,448);
 			this.bg.endFill();
 			return;
@@ -828,7 +856,7 @@ drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
 		down = (this.displayHeight - startY - 56. + 28.) * size1;
 		left = (-startX * size1 - 56.25 + 28.125) * size1;
 		up = (-startY * size1 - 56. + 28.) * size1;
-		this.bg.beginFill(2998015,size1);
+		this.bg.beginFill(2201331,size1);
 		this.bg.drawRect(startX,startY,right,down);
 		this.bg.drawRect(startX,startY,left,up);
 		this.bg.drawRect(startX,startY,right,up);
@@ -837,43 +865,174 @@ drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
 	}
 	,__class__: drums_ui_CellEditPanel
 });
-var drums_ui_CellInfoPanel = function() {
-	drums_ui_UIElement.call(this,210,84);
-	this.cellIndex = new PIXI.Text("01",{ font : "400 20px Ubuntu", fill : "#00ffbe", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
-	this.cellIndex.position.set(15,10);
-	this.trackName = new PIXI.Text("Cowbell",{ font : "400 26px Ubuntu", fill : "white", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
-	this.duration = new PIXI.Text("00.000 s",{ font : "400 16px Ubuntu", fill : "white", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
-	this.addChild(this.cellIndex);
-	this.addChild(this.trackName);
-	this.addChild(this.duration);
+var drums_ui_Controls = function() {
+	this.setupControlBar();
+	this.setupTracks();
+	window.addEventListener("keydown",$bind(this,this.onKeyDown));
+	this.muteTracks = new Int8Array([0,0,0,0,0,0,0,0]);
+	this.soloTracks = new Int8Array([0,0,0,0,0,0,0,0]);
 };
-drums_ui_CellInfoPanel.__name__ = true;
-drums_ui_CellInfoPanel.floatToStringPrecision = function(n,prec) {
-	n = Math.round(n * Math.pow(10,prec));
-	var str = "" + n;
-	var len = str.length;
-	if(len <= prec) {
-		while(len < prec) {
-			str = "0" + str;
-			len++;
+drums_ui_Controls.__name__ = true;
+drums_ui_Controls.prototype = {
+	onKeyDown: function(e) {
+		if(e.ctrlKey) return;
+		var _g = e.keyCode;
+		switch(_g) {
+		case 32:case 49:
+			this.playToggle.setValue(!this.playToggle.getValue());
+			break;
+		case 82:case 50:
+			this.randomModeToggle.setValue(!this.randomModeToggle.getValue());
+			break;
+		case 51:case 16:
+			this.recordToggle.setValue(!this.recordToggle.getValue());
+			break;
+		case 52:case 77:
+			this.muteToggle.setValue(!this.muteToggle.getValue());
+			break;
+		case 107:case 187:
+			var val = this.volume.getValue(true) + .1;
+			if(val > 1) val = 1;
+			this.volume.setValue(val,true);
+			break;
+		case 189:case 109:
+			var val1 = this.volume.getValue(true) - .1;
+			if(val1 < 0) val1 = 0;
+			this.volume.setValue(val1,true);
+			break;
 		}
-		return "0." + str;
 	}
-	return HxOverrides.substr(str,0,str.length - prec) + "." + HxOverrides.substr(str,str.length - prec,null);
+	,setupControlBar: function() {
+		var _g = this;
+		var byId = ($_=window.document,$bind($_,$_.getElementById));
+		this.playToggle = new parameter_ParameterBase("playToggle",parameter__$Parameter_Parameter_$Impl_$.getBool(true,false));
+		this.playToggle.addObserver(function(p) {
+			var state = p.getValue();
+			byId("play-button").style.display = state?"none":"";
+			byId("stop-button").style.display = state?"":"none";
+		});
+		js.JQuery("#play-button").on("click tap",function(_) {
+			_g.playToggle.setValue(true);
+		});
+		js.JQuery("#stop-button").on("click tap",function(_1) {
+			_g.playToggle.setValue(false);
+		});
+		var randomButton = byId("shuffle-button");
+		this.randomModeToggle = new parameter_ParameterBase("randomModeToggle",parameter__$Parameter_Parameter_$Impl_$.getBool(false,true));
+		this.randomModeToggle.addObserver(function(p1) {
+			if(p1.getValue()) randomButton.classList.add("mdl-button--accent"); else randomButton.classList.remove("mdl-button--accent");
+		});
+		js.JQuery(randomButton).on("click tap",function(_2) {
+			_g.randomModeToggle.setValue(!_g.randomModeToggle.getValue());
+		});
+		var recordButton = byId("record-button");
+		this.recordToggle = new parameter_ParameterBase("recordToggle",parameter__$Parameter_Parameter_$Impl_$.getBool(false,true));
+		this.recordToggle.addObserver(function(p2) {
+			if(p2.getValue()) recordButton.classList.add("mdl-button--accent"); else recordButton.classList.remove("mdl-button--accent");
+		});
+		js.JQuery(recordButton).on("click tap",function(_3) {
+			_g.recordToggle.setValue(!_g.recordToggle.getValue());
+		});
+		var bpmSlider = byId("bpm-slider");
+		this.bpm = (function($this) {
+			var $r;
+			var min = Std.parseInt(bpmSlider.min);
+			var max = Std.parseInt(bpmSlider.max);
+			$r = new parameter_ParameterBase("bpmSlider",parameter__$Parameter_Parameter_$Impl_$.getInt(min,max));
+			return $r;
+		}(this));
+		this.bpm.addObserver(function(p3) {
+			var val = p3.getValue();
+			bpmSlider.MaterialSlider.change(val);
+			js.JQuery(bpmSlider).parent().siblings("div[for=\"bpm-slider\"]").text("" + val);
+		});
+		js.JQuery("#bpm-slider").on("change",function(_4) {
+			_g.bpm.setValue(bpmSlider.valueAsNumber | 0);
+		});
+		this.bpm.setDefault(bpmSlider.valueAsNumber | 0);
+		var swingSlider = byId("swing-slider");
+		this.swing = (function($this) {
+			var $r;
+			var min1 = Std.parseInt(swingSlider.min);
+			var max1 = parseFloat(swingSlider.max);
+			$r = new parameter_ParameterBase("swingSlider",parameter__$Parameter_Parameter_$Impl_$.getFloat(min1,max1));
+			return $r;
+		}(this));
+		this.swing.addObserver(function(p4) {
+			var val1 = p4.getValue();
+			swingSlider.MaterialSlider.change(val1);
+			js.JQuery(swingSlider).parent().siblings("div[for=\"swing-slider\"]").text("" + val1 * 100 + "%");
+		});
+		js.JQuery("#swing-slider").on("change",function(_5) {
+			_g.swing.setValue(swingSlider.valueAsNumber);
+		});
+		this.swing.setDefault(swingSlider.valueAsNumber);
+		var volumeSlider = byId("volume-slider");
+		this.volume = (function($this) {
+			var $r;
+			var min2 = Std.parseInt(volumeSlider.min);
+			var max2 = parseFloat(volumeSlider.max);
+			$r = new parameter_ParameterBase("volumeSlider",parameter__$Parameter_Parameter_$Impl_$.getFloatExponential(min2,max2));
+			return $r;
+		}(this));
+		this.volume.addObserver(function(p5) {
+			var normValue = p5.getValue(true);
+			volumeSlider.MaterialSlider.change(normValue);
+			js.JQuery(volumeSlider).parent().siblings("div[for=\"volume-slider\"]").text("" + normValue);
+		});
+		js.JQuery("#volume-slider").on("change",function(_6) {
+			_g.volume.setValue(volumeSlider.valueAsNumber,true);
+		});
+		this.volume.setDefault(volumeSlider.valueAsNumber,true);
+		this.muteToggle = new parameter_ParameterBase("muteToggle",parameter__$Parameter_Parameter_$Impl_$.getBool(false,true));
+		this.muteToggle.addObserver(function(p6) {
+			var state1 = p6.getValue();
+			if(state1) volumeSlider.MaterialSlider.disable(); else volumeSlider.MaterialSlider.enable();
+			byId("mute-button").style.display = state1?"none":"";
+			byId("unmute-button").style.display = state1?"":"none";
+		});
+		js.JQuery("#mute-button").on("click tap",function(_7) {
+			_g.muteToggle.setValue(true);
+		});
+		js.JQuery("#unmute-button").on("click tap",function(_8) {
+			_g.muteToggle.setValue(false);
+		});
+	}
+	,setupTracks: function() {
+		var _g = this;
+		this.trackShuffle = new hxsignal_impl_Signal1();
+		this.trackMute = new hxsignal_impl_Signal2();
+		this.trackSolo = new hxsignal_impl_Signal2();
+		this.trackMute.connect(function(i,state) {
+			if(state) js.JQuery("#track-mute-" + i).addClass("mdl-button--accent"); else js.JQuery("#track-mute-" + i).removeClass("mdl-button--accent");
+			_g.muteTracks[i] = state?1:0;
+		});
+		this.trackSolo.connect(function(i1,state1) {
+			if(state1) js.JQuery("#track-solo-" + i1).addClass("mdl-button--accent"); else js.JQuery("#track-solo-" + i1).removeClass("mdl-button--accent");
+			_g.soloTracks[i1] = state1?1:0;
+		});
+		var _g1 = 0;
+		while(_g1 < 8) {
+			var i2 = [_g1++];
+			js.JQuery("#track-shuffle-" + i2[0]).on("click tap",(function(i2) {
+				return function(_) {
+					_g.trackShuffle.emit(i2[0]);
+				};
+			})(i2));
+			js.JQuery("#track-mute-" + i2[0]).on("click tap",(function(i2) {
+				return function(_1) {
+					_g.trackMute.emit(i2[0],!js.JQuery("#track-mute-" + i2[0]).hasClass("mdl-button--accent"));
+				};
+			})(i2));
+			js.JQuery("#track-solo-" + i2[0]).on("click tap",(function(i2) {
+				return function(_2) {
+					_g.trackSolo.emit(i2[0],!js.JQuery("#track-solo-" + i2[0]).hasClass("mdl-button--accent"));
+				};
+			})(i2));
+		}
+	}
+	,__class__: drums_ui_Controls
 };
-drums_ui_CellInfoPanel.__super__ = drums_ui_UIElement;
-drums_ui_CellInfoPanel.prototype = $extend(drums_ui_UIElement.prototype,{
-	update: function(sequencer,i,j) {
-		var jj = j + 1;
-		var track = sequencer.tracks[i];
-		this.cellIndex.text = jj < 10?"0" + jj + "/16":"" + jj + "/16";
-		this.duration.text = "" + drums_ui_CellInfoPanel.floatToStringPrecision(track.source.duration,4);
-		this.duration.position.set(195 - this.duration.width,48);
-		this.trackName.text = track.name;
-		this.trackName.position.set(15,40);
-	}
-	,__class__: drums_ui_CellInfoPanel
-});
 var drums_ui_SequenceGrid = function(drums1) {
 	PIXI.Container.call(this);
 	this.drums = drums1;
@@ -955,6 +1114,7 @@ drums_ui_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 	,update: function(dt) {
 		var c;
 		var cell;
+		var active;
 		var tracks = this.drums.tracks;
 		var _g = 0;
 		while(_g < 8) {
@@ -963,11 +1123,16 @@ drums_ui_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
 			while(_g1 < 16) {
 				var j = _g1++;
 				cell = this.cells[i][j];
-				if(cell.width > 41.6) {
-					var size = cell.width - (cell.width - 41.6) * .15 | 0;
-					this.drawCell(cell,size,16777215);
+				active = tracks[i].events[j].active;
+				var w = cell.width;
+				if(active && w > 41.6) {
+					var p = (w / 41.6 - 1) * 4;
+					var intensity = 48 + (207 * p | 0);
+					var size = w - (w - 41.6) * .1;
+					if(p < .001) size = 41.6;
+					this.drawCell(cell,size,intensity | intensity << 8 | intensity << 16);
 				} else {
-					c = tracks[i].events[j].active?16777215:1184274;
+					c = active?3158064:1184274;
 					if(cell.lineColor != c) {
 						cell.lineColor = c;
 						this.drawCell(cell,41.6,c);
@@ -1007,7 +1172,7 @@ drums_ui_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
 		this.clear();
 		this.x = target.x;
 		this.y = target.y;
-		this.beginFill(2997998,0.25);
+		this.beginFill(2201331,0.25);
 		this.drawRect(-26.,-26.,52,52);
 		this.endFill();
 		this.alpha = 0;
@@ -1022,17 +1187,17 @@ drums_ui_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
 		this.alpha = 1;
 		var pp = p * p;
 		var ppp = pp * p;
-		this.beginFill(2998015,.25 + ppp * .25);
+		this.beginFill(2201331,.25 + ppp * .25);
 		this.drawRect(-26.,-26.,52,52);
 		this.endFill();
-		this.beginFill(2998015,pp);
+		this.beginFill(2201331,pp);
 		this.drawRect(-26.,-26.,pp * 52,52);
 		this.endFill();
 	}
 	,onLongPress: function(target) {
 		if(target.parent != this.parent) return;
 		this.isDown = false;
-		this.beginFill(2998015,1);
+		this.beginFill(2201331,1);
 		this.drawRect(-26.,-26.,52,52);
 		this.endFill();
 		var values = target.name.split(",");
@@ -1057,6 +1222,43 @@ drums_ui_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
 		}
 	}
 	,__class__: drums_ui_CellUI
+});
+var drums_ui_celledit_CellInfoPanel = function() {
+	drums_ui_UIElement.call(this,210,84);
+	this.cellIndex = new PIXI.Text("01",{ font : "400 20px Roboto", fill : "#00ffbe", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
+	this.cellIndex.position.set(15,10);
+	this.trackName = new PIXI.Text("Cowbell",{ font : "400 26px Roboto", fill : "white", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
+	this.duration = new PIXI.Text("00.000 s",{ font : "400 16px Roboto", fill : "white", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
+	this.addChild(this.cellIndex);
+	this.addChild(this.trackName);
+	this.addChild(this.duration);
+};
+drums_ui_celledit_CellInfoPanel.__name__ = true;
+drums_ui_celledit_CellInfoPanel.floatToStringPrecision = function(n,prec) {
+	n = Math.round(n * Math.pow(10,prec));
+	var str = "" + n;
+	var len = str.length;
+	if(len <= prec) {
+		while(len < prec) {
+			str = "0" + str;
+			len++;
+		}
+		return "0." + str;
+	}
+	return HxOverrides.substr(str,0,str.length - prec) + "." + HxOverrides.substr(str,str.length - prec,null);
+};
+drums_ui_celledit_CellInfoPanel.__super__ = drums_ui_UIElement;
+drums_ui_celledit_CellInfoPanel.prototype = $extend(drums_ui_UIElement.prototype,{
+	update: function(sequencer,i,j) {
+		var jj = j + 1;
+		var track = sequencer.tracks[i];
+		this.cellIndex.text = jj < 10?"0" + jj + "/16":"" + jj + "/16";
+		this.duration.text = "" + drums_ui_celledit_CellInfoPanel.floatToStringPrecision(track.source.duration,4);
+		this.duration.position.set(195 - this.duration.width,50);
+		this.trackName.text = track.name;
+		this.trackName.position.set(15,40);
+	}
+	,__class__: drums_ui_celledit_CellInfoPanel
 });
 var drums_ui_celledit_OscilliscopePanel = function(drums1,trackIndex,tickIndex) {
 	drums_ui_UIElement.call(this,315,100);
@@ -1336,6 +1538,9 @@ hxsignal_impl_SignalBase.prototype = {
 		con.connected = true;
 		return true;
 	}
+	,isConnected: function(slot) {
+		return this.slots.has(slot);
+	}
 	,loop: function(delegate) {
 		this.emitting = true;
 		var $it0 = this.slots.groups.iterator();
@@ -1457,6 +1662,9 @@ hxsignal_impl_SlotMap.prototype = {
 	}
 	,get: function(slot) {
 		return this.slots.h[slot.__id__];
+	}
+	,has: function(slot) {
+		return this.slots.h[slot.__id__] != null;
 	}
 	,disconnect: function(slot) {
 		var con = this.slots.h[slot.__id__];
@@ -1641,39 +1849,7 @@ parameter_MapBool.prototype = {
 	,mapInverse: function(value) {
 		return value == this.max?1.0:.0;
 	}
-	,toString: function() {
-		return "[MapBool]";
-	}
 	,__class__: parameter_MapBool
-};
-var parameter_MapIntExponential = function(min,max) {
-	if(max == null) max = 1;
-	if(min == null) min = -1;
-	this.setMinMax(min,max);
-};
-parameter_MapIntExponential.__name__ = true;
-parameter_MapIntExponential.__interfaces__ = [parameter_IMapping];
-parameter_MapIntExponential.prototype = {
-	setMinMax: function(min,max) {
-		this.min = min;
-		this.max = max;
-		this._t2 = 0;
-		if(min <= 0) this._t2 = 1 + min * -1;
-		this._min = min + this._t2;
-		this._max = max + this._t2;
-		this._t0 = Math.log(this._max / this._min);
-		this._t1 = 1.0 / this._t0;
-	}
-	,map: function(normalisedValue) {
-		return Math.round(this._min * Math.exp(normalisedValue * this._t0) - this._t2);
-	}
-	,mapInverse: function(value) {
-		return Math.log((value + this._t2) / this._min) * this._t1;
-	}
-	,toString: function() {
-		return "[MapIntExponential] min:" + this.min + ", max:" + this.max;
-	}
-	,__class__: parameter_MapIntExponential
 };
 var parameter_MapIntLinear = function(min,max) {
 	if(max == null) max = 1;
@@ -1689,9 +1865,6 @@ parameter_MapIntLinear.prototype = {
 	}
 	,mapInverse: function(value) {
 		return (value - this.min) / (this.max - this.min);
-	}
-	,toString: function() {
-		return "[MapIntLinear] min:" + this.min + ", max:" + this.max;
 	}
 	,__class__: parameter_MapIntLinear
 };
@@ -1709,9 +1882,6 @@ parameter_MapFloatLinear.prototype = {
 	}
 	,mapInverse: function(value) {
 		return (value - this.min) / (this.max - this.min);
-	}
-	,toString: function() {
-		return "[MapFloatLinear] min:" + this.min + ", max:" + this.max;
 	}
 	,__class__: parameter_MapFloatLinear
 };
@@ -1738,9 +1908,6 @@ parameter_MapFloatExponential.prototype = {
 	}
 	,mapInverse: function(value) {
 		return Math.log((value + this._t2) / this._min) * this._t1;
-	}
-	,toString: function() {
-		return "[MapFloatExponential] min:" + this.min + ", max:" + this.max;
 	}
 	,__class__: parameter_MapFloatExponential
 };
@@ -1777,8 +1944,11 @@ parameter_ParameterBase.prototype = {
 		if(normalised) return this.normalisedValue;
 		return this.mapping.map(this.normalisedValue);
 	}
-	,toString: function() {
-		return "[Parameter] " + this.name + ", defaultValue:" + Std.string(this.defaultValue) + ", mapping:" + this.mapping.toString();
+	,addObserver: function(callback,triggerImmediately,once) {
+		if(once == null) once = false;
+		if(triggerImmediately == null) triggerImmediately = false;
+		if(!this.change.isConnected(callback)) this.change.connect(callback,once?hxsignal_ConnectionTimes.Once:hxsignal_ConnectionTimes.Forever);
+		if(triggerImmediately) this.change.emit(this);
 	}
 	,__class__: parameter_ParameterBase
 };
@@ -1795,9 +1965,6 @@ parameter__$Parameter_Parameter_$Impl_$.getFloatExponential = function(min,max) 
 };
 parameter__$Parameter_Parameter_$Impl_$.getInt = function(min,max) {
 	return new parameter_MapIntLinear(min,max);
-};
-parameter__$Parameter_Parameter_$Impl_$.getIntExponential = function(min,max) {
-	return new parameter_MapIntExponential(min,max);
 };
 var tones_AudioBase = function(audioContext,destinationNode) {
 	this.lastTime = .0;
@@ -2028,7 +2195,7 @@ tones_utils_TimeUtil.onFrame = function(_) {
 var util_WebFontEmbed = function() { };
 util_WebFontEmbed.__name__ = true;
 util_WebFontEmbed.load = function() {
-	var config = { google : { families : ["Ubuntu:300,400,700"]}, active : util_WebFontEmbed.loaded};
+	var config = { google : { families : ["Roboto:300,400,500,700"]}, active : util_WebFontEmbed.loaded};
 	var o = window;
 	o.WebFontConfig = config;
 	var tmp;
@@ -2041,6 +2208,7 @@ util_WebFontEmbed.load = function() {
 	var s = window.document.getElementsByTagName("script")[0];
 	s.parentNode.insertBefore(wf,s);
 };
+function $iterator(o) { if( o instanceof Array ) return function() { return HxOverrides.iter(o); }; return typeof(o.iterator) == 'function' ? $bind(o,o.iterator) : o.iterator; }
 var $_, $fid = 0;
 function $bind(o,m) { if( m == null ) return null; if( m.__id__ == null ) m.__id__ = $fid++; var f; if( o.hx__closures__ == null ) o.hx__closures__ = {}; else f = o.hx__closures__[m.__id__]; if( f == null ) { f = function(){ return f.method.apply(f.scope, arguments); }; f.scope = o; f.method = m; o.hx__closures__[m.__id__] = f; } return f; }
 String.prototype.__class__ = String;
@@ -2054,6 +2222,9 @@ var Bool = Boolean;
 Bool.__ename__ = ["Bool"];
 var Class = { __name__ : ["Class"]};
 var Enum = { };
+var q = window.jQuery;
+var js = js || {}
+js.JQuery = q;
 var node = window.OscillatorNode;
 if(node != null) {
 	if(Object.prototype.hasOwnProperty.call(node,"SINE")) {
