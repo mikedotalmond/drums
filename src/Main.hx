@@ -122,8 +122,6 @@ class Main extends Application {
 			
 			var track; var solo;
 			
-			trace(soloCount);
-			
 			for (j in 0...8) {
 				
 				track = tracks[j];
