@@ -217,24 +217,38 @@ class Track {
 	static inline var HALFPI = 1.5707963267948966;
 	static inline var stepCount = 16;
 
-	public var name(default, null):String;
-	public var events(default, null):Array<TrackEvent>;
-	public var source(default, null):Samples;
-
-	public var pan(get, set):Float;
-
 	var _pan:Float = 0;
 	var panNode:PannerNode;
+	var outGain:Float = 1;
+	var gainNode:GainNode;
+	
+	public var name		(default, null):String;
+	public var events	(default, null):Array<TrackEvent>;
+	public var source	(default, null):Samples;
 
+	public var isMuted	(default, null):Bool = false;
+	
+	public var isSolo	:Bool = false;
+	public var otherSolo:Bool = false;
+	
+	public var pan(get, set):Float;
+
+	
 	public function new(name:String, buffer:AudioBuffer,context:AudioContext, destination:AudioNode) {
 
 		this.name = name;
 
+		// output level
+		outGain = 1.0;
+		gainNode = context.createGain();
+		gainNode.gain.value = outGain;
+		gainNode.connect(destination);
+		
 		//pan
 		panNode = context.createPanner();
 		panNode.panningModel = PanningModelType.EQUALPOWER;
-		panNode.connect(destination);
-
+		panNode.connect(gainNode);
+		
 		//other fx
 
 		// source
@@ -274,7 +288,22 @@ class Track {
 			e.release = release;
 		}
 	}
-
+	
+	public function mute(state:Bool) {
+		isMuted = state;
+		updateOutputState();
+	}
+	
+	public function solo(state:Bool) {
+		isSolo = state;
+		updateOutputState();
+	}
+	
+	public function updateOutputState() {
+		var val = isMuted ? 0 : ((!otherSolo || isSolo) ? outGain : 0);
+		gainNode.gain.setValueAtTime(val, 0);	
+	}
+	
 
 	inline function get_pan() return _pan;
 	function set_pan(value:Float) {

@@ -39,6 +39,9 @@ class Main extends Application {
 	var beatLines:BeatLines;
 	var ready:Bool;
 	
+	var randomise:Bool = false;
+	var controls:drums.ui.Controls;
+	
 	var recorder:AudioNodeRecorder;
 
 	public function new() {
@@ -46,31 +49,101 @@ class Main extends Application {
 
 		ready = false;
 
-		initUI();
+		controls = new Controls();
+		
 		initAudio();
 		initPixi();
 
 		//initOscilliscope();
 		initBeatLines();
 		initStepGrid();
-
+		
+		initControlRouting();
+		
 		stageResized();
-
-		Browser.window.addEventListener('keydown', function(e:KeyboardEvent) {
-			switch(e.keyCode) {
-				case KeyCodes.SPACE:
-					if (drums.playing) drums.stop();
-					else drums.play();
+	}
+	
+	
+	function initControlRouting() {
+		
+		controls.bpm.addObserver(function(p) { drums.bpm = p.getValue(); } );
+		
+		controls.muteToggle.addObserver(function(p) {
+			if (p.getValue()) {
+				outGain.gain.setValueAtTime(0, 0);
+			} else {
+				outGain.gain.setValueAtTime(controls.volume.getValue(), 0);
 			}
+		});
+		
+		controls.playToggle.addObserver(function(p) {
+			if (p.getValue()) drums.play();
+			else drums.stop();
+		});
+		
+		controls.randomModeToggle.addObserver(function(p) {
+			randomise = p.getValue();
+		});
+		
+		controls.recordToggle.addObserver(function(p) {
+			if (p.getValue()) {
+				trace('recording...');
+				recorder.clear();
+				recorder.start();
+			} else {
+				trace('stopped recording');
+				recorder.stop();
+				trace('encoding wav');
+				recorder.encodeWAV();
+			}
+		});
+		
+		controls.swing.addObserver(function(p) {
+			drums.swing = p.getValue();
+		});
+		
+		controls.volume.addObserver(function(p) {
+			outGain.gain.setValueAtTime(p.getValue(), 0);
+		});
+		
+		controls.trackMute.connect(function(i, state) {
+			drums.tracks[i].mute(state);
+		});		
+		
+		controls.trackShuffle.connect(function(i) {
+			drums.tracks[i].randomise();
+		});
+		
+		controls.trackSolo.connect(function(i, state) {
+			var tracks = drums.tracks;
+			var soloTracks = controls.soloTracks;
+			var soloCount = 0;
+			for (val in soloTracks) soloCount += val;
+			
+			var track; var solo;
+			
+			trace(soloCount);
+			
+			for (j in 0...8) {
+				
+				track = tracks[j];
+				solo = soloTracks[j];
+				
+				if (solo == 0 && soloCount > 0) {
+					track.otherSolo = true;
+				} else if(solo == 1 && soloCount > 1){
+					track.otherSolo = true;
+				} else {
+					track.otherSolo = false;
+				}
+			}
+			
+			tracks[i].solo(state);
+			for (track in tracks) track.updateOutputState();
+			
 		});
 	}
 	
-	function initUI() {
-		
-		controls = new Controls();
-		
-	}
-
 
 	function initAudio() {
 		
@@ -86,22 +159,9 @@ class Main extends Application {
 		
 		recorder = new AudioNodeRecorder(drums.output);
 		recorder.wavEncoded.connect(onOutputBufferEncoded);
-		
-		Reflect.setField(Browser.window,'startRecord',startRecord);
-		Reflect.setField(Browser.window,'stopRecord',stopRecord);
-		Reflect.setField(Browser.window,'toggleRandomise',toggleRandomise);
 	}
 	
-	function startRecord() {
-		trace('recording...');
-		recorder.clear();
-		recorder.start();
-	}
-	function stopRecord() {
-		trace('stopped recording');
-		recorder.stop(); 
-		recorder.encodeWAV();
-	}
+	
 	function onOutputBufferEncoded(data:Blob) {
 		trace('Encoded wav - ${(data.size>>10) / 1024} MB  (${data.size} bytes)');
 		AudioNodeRecorder.forceDownload(data);
@@ -113,18 +173,13 @@ class Main extends Application {
 		ready = true;
 		Browser.document.getElementById('load-spinner').remove();
 		Browser.document.getElementById('pixi-container').style.display = '';
-		drums.bpm = 60 + Math.random() * 120;
-		drums.swing = Math.random()*.5;
+		controls.bpm.setValue(Math.round(60 + Math.random() * 120));
+		controls.swing.setValue(Math.random()*.5);
+		controls.volume.setValue(.5);
 		drums.play(0);
 	}
 	
-	var randomise:Bool = true;
-	var controls:drums.ui.Controls;
-	function toggleRandomise() {
-		randomise = !randomise;
-		trace('randomise:$randomise');
-	}
-
+	
 	function onSequenceTick(index:Int, time:Float) {
 		beatLines.tick(index);
 		sequenceGrid.tick(index);
