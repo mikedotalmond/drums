@@ -37,11 +37,11 @@ button.iconbutton i {
 }
 
 
-.bpm-slider .mdl-slider__container {
+.label-sldier .mdl-slider__container {
 	top: 11px;
 }
 
-.bpm-slider p {
+.label-sldier p {
 	line-height: 40px;
 	margin: 0;
 }
@@ -75,4 +75,32 @@ button.iconbutton i {
 
 .sequencer-grid {
 	background-color: rgb(18, 19, 20);
+}
+
+#cell-edit-controls {
+	display: none;
+	position: relative;
+	z-index: 1;
+}
+
+#cell-edit-controls .container #close-cell-edit {
+	position: absolute;
+	right: -8px;
+	top:-8px; 
+}
+
+
+#cell-edit-controls .container #cell-play-button {
+	position: absolute;
+	top: 40px;
+	left: 270px;
+}
+
+#cell-edit-controls .container .cell-edit-sliders {
+	position: absolute;
+	width: 826px;
+	color:#fefefe;
+	background-color: rgb(12, 120, 208);
+	top: 256px;
+	left: 26px;
 }

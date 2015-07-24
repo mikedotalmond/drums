@@ -86,11 +86,16 @@ class Main extends Application {
 		});
 		
 		controls.recordToggle.addObserver(function(p) {
-			if (p.getValue()) {
+			
+			if (!recorder.recording && p.getValue()) {
+				if (!drums.playing) {
+					p.setValue(false);
+					return;
+				}
 				trace('recording...');
 				recorder.clear();
 				recorder.start();
-			} else {
+			} else if(recorder.recording){
 				trace('stopped recording');
 				recorder.stop();
 				trace('encoding wav');

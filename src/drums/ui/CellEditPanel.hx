@@ -7,6 +7,8 @@ import drums.ui.celledit.OscilliscopePanel;
 import drums.ui.celledit.WaveformPanel;
 import drums.ui.UIElement;
 import hxsignal.Signal;
+import js.Browser;
+import js.html.Element;
 import pixi.core.display.Container;
 import pixi.core.display.DisplayObject;
 import pixi.core.graphics.Graphics;
@@ -34,9 +36,10 @@ class CellEditPanel extends Container {
 
 	var uiContainer:Container;
 	var cellInfo:CellInfoPanel;
-	var playButton:LabelButton;
+	var playButton:Button;
 	var waveform:WaveformPanel;
 	var oscilliscope:OscilliscopePanel;
+	var controls:drums.ui.CellEditPanel.CellEditControls;
 
 
 	public var closed(default, null):Signal<Void->Void>;
@@ -57,6 +60,8 @@ class CellEditPanel extends Container {
 
 		setupUI(pointer);
 
+		controls = new CellEditControls();
+		
 		pointer.watch(bg);
 		pointer.click.connect(onClick);
 	}
@@ -71,12 +76,12 @@ class CellEditPanel extends Container {
 			}
 		}
 	}
-
+	
 
 	public function edit(trackIndex:Int, tickIndex:Int) {
 		this.trackIndex = trackIndex;
 		this.tickIndex = tickIndex;
-
+		
 		visible = launching = true;
 		fadeUI = closing = false;
 
@@ -88,6 +93,8 @@ class CellEditPanel extends Container {
 		waveform.setup(drums, trackIndex, tickIndex);
 
 		cellInfo.update(drums, trackIndex, tickIndex);
+		
+		controls.update(drums, trackIndex, tickIndex);
 	}
 
 
@@ -100,6 +107,9 @@ class CellEditPanel extends Container {
 		closing = true;
 		launching = false;
 		uiContainer.alpha = 0;
+		
+		controls.close();
+		
 		closed.emit();
 	}
 
@@ -127,6 +137,7 @@ class CellEditPanel extends Container {
 
 			if (fadeUI && uiContainer.alpha < 1) {
 				uiContainer.alpha += .09;
+				controls.container.style.opacity = ''+uiContainer.alpha;
 				if (uiContainer.alpha >= 1) {
 					uiContainer.alpha = 1;
 					fadeUI = false;
@@ -153,7 +164,8 @@ class CellEditPanel extends Container {
 		bg.endFill();
 
 		cellInfo = new CellInfoPanel();
-		playButton = new LabelButton(90, 84, 'Play');
+		playButton = new Button(90, 84);
+		//playButton = new LabelButton(90, 84, 'Play');
 		playButton.position.set(225, 0);
 		pointer.watch(playButton);
 
@@ -232,5 +244,26 @@ class CellEditPanel extends Container {
 
 	inline function playNow():Void {
 		drums.playTrackCellNow(trackIndex, tickIndex);
+	}
+}
+
+
+class CellEditControls {
+	
+	public var container:Element;
+
+	public function new() {
+		container = Browser.document.getElementById('cell-edit-controls');
+	}
+	
+	public function update(drums:DrumSequencer, trackIndex:Int, tickIndex:Int) {
+		container.style.opacity = '0';
+		container.style.display = 'block';
+		var track = drums.tracks[trackIndex];
+		var event = track.events[tickIndex];
+	}
+	
+	public function close() {
+		container.style.display = 'none';
 	}
 }
