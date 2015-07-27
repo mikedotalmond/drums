@@ -103,4 +103,9 @@ button.iconbutton i {
 	background-color: rgb(12, 120, 208);
 	top: 256px;
 	left: 26px;
+	padding: 12px 8px;
+}
+
+#cell-edit-controls .container .cell-edit-sliders label > p {
+	float:left;
 }
