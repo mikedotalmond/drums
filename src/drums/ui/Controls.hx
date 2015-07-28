@@ -118,7 +118,7 @@ class Controls {
 			untyped bpmSlider.MaterialSlider.change(val);
 			new JQuery(bpmSlider).parent().siblings('div[for="bpm-slider"]').text('${val}');
 		});
-		new JQuery('#bpm-slider').on('change', function(_) { bpm.setValue(Std.int(bpmSlider.valueAsNumber)); });
+		new JQuery('#bpm-slider').on('input change', function(_) { bpm.setValue(Std.int(bpmSlider.valueAsNumber)); });
 		bpm.setDefault(Std.int(bpmSlider.valueAsNumber));
 		
 		
@@ -128,9 +128,9 @@ class Controls {
 		swing.addObserver(function(p) {
 			var val = p.getValue();
 			untyped swingSlider.MaterialSlider.change(val);
-			new JQuery(swingSlider).parent().siblings('div[for="swing-slider"]').text('${val*100}%');
+			new JQuery(swingSlider).parent().siblings('div[for="swing-slider"]').text('${Std.int(val*100)}%');
 		});
-		new JQuery('#swing-slider').on('change', function(_) { swing.setValue(swingSlider.valueAsNumber); });
+		new JQuery('#swing-slider').on('input change', function(_) { swing.setValue(swingSlider.valueAsNumber); });
 		swing.setDefault(swingSlider.valueAsNumber);
 		
 		//
@@ -141,7 +141,7 @@ class Controls {
 			untyped volumeSlider.MaterialSlider.change(normValue);
 			new JQuery(volumeSlider).parent().siblings('div[for="volume-slider"]').text('${normValue}');
 		});
-		new JQuery('#volume-slider').on('change', function(_) { volume.setValue(volumeSlider.valueAsNumber, true); });
+		new JQuery('#volume-slider').on('input change', function(_) { volume.setValue(volumeSlider.valueAsNumber, true); });
 		volume.setDefault(volumeSlider.valueAsNumber, true);
 		
 		//
