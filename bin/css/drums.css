@@ -83,14 +83,14 @@ button.iconbutton i {
 	z-index: 1;
 }
 
-#cell-edit-controls .container #close-cell-edit {
+#cell-edit-controls .container #cell-edit-close-button {
 	position: absolute;
 	right: -8px;
 	top:-8px; 
 }
 
 
-#cell-edit-controls .container #cell-play-button {
+#cell-edit-controls .container .cell-play-button {
 	position: absolute;
 	top: 40px;
 	left: 270px;

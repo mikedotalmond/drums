@@ -10,8 +10,8 @@ import tones.utils.TimeUtil;
  */
 class Pointer {
 
-	static inline var clickTime:Float = 266;
-	static inline var longPressTime:Float = 500;
+	static inline var clickTime:Float = 250;
+	static inline var longPressTime:Float = 400;
 
 	public var up(default, null):Signal<DisplayObject->Void>;
 	public var down(default, null):Signal<DisplayObject->Void>;

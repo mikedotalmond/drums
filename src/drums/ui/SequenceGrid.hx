@@ -175,6 +175,7 @@ class CellUI extends Graphics {
 
 		pointer.click.connect(onClick);
 		pointer.down.connect(onDown);
+		pointer.up.connect(onPressCancel);
 		pointer.longPress.connect(onLongPress);
 		pointer.pressCancel.connect(onPressCancel);
 		pointer.pressProgress.connect(onPressProgress);
@@ -188,7 +189,6 @@ class CellUI extends Graphics {
 		var tickIndex = Std.parseInt(values[1]);
 		toggleEvent.emit(trackIndex, tickIndex);
 	}
-
 
 	function onDown(target:DisplayObject) {
 		if (target.parent != parent) return;
