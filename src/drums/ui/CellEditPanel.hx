@@ -9,6 +9,8 @@ import drums.ui.UIElement;
 import hxsignal.Signal;
 import js.Browser;
 import js.html.Element;
+import js.html.InputElement;
+import js.JQuery;
 import pixi.core.display.Container;
 import pixi.core.display.DisplayObject;
 import pixi.core.graphics.Graphics;
@@ -61,21 +63,21 @@ class CellEditPanel extends Container {
 		setupUI(pointer);
 
 		controls = new CellEditControls();
+		controls.close.connect(close);
+		controls.play.connect(playNow);
 		
-		pointer.watch(bg);
-		pointer.click.connect(onClick);
+		//pointer.watch(bg);
+		//pointer.click.connect(onClick);
 	}
 
 
-	function onClick(target:DisplayObject) {
-		if (target.parent == this) {
-			close();
-		} else if (target.parent==uiContainer) {
-			switch (target){
-				case playButton: playNow();
-			}
-		}
-	}
+	//function onClick(target:DisplayObject) {
+		//if (target.parent == uiContainer) {
+			//switch (target){
+				//case playButton: playNow();
+			//}
+		//}
+	//}
 	
 
 	public function edit(trackIndex:Int, tickIndex:Int) {
@@ -107,8 +109,6 @@ class CellEditPanel extends Container {
 		closing = true;
 		launching = false;
 		uiContainer.alpha = 0;
-		
-		controls.close();
 		
 		closed.emit();
 	}
@@ -248,12 +248,28 @@ class CellEditPanel extends Container {
 }
 
 
+
 class CellEditControls {
 	
 	public var container:Element;
+	
+	public var close(default, null):Signal<Void->Void>;
+	public var play(default, null):Signal<Void->Void>;
 
 	public function new() {
+		
 		container = Browser.document.getElementById('cell-edit-controls');
+		
+		close = new Signal<Void->Void>();
+		play = new Signal<Void->Void>();
+		
+		new JQuery('#cell-edit-play-button').on('click tap', function(_) {
+			play.emit();
+		});
+		new JQuery('#cell-edit-close-button').on('click tap', function(_) {
+			close.emit();
+			container.style.display = 'none';
+		});
 	}
 	
 	public function update(drums:DrumSequencer, trackIndex:Int, tickIndex:Int) {
@@ -261,9 +277,5 @@ class CellEditControls {
 		container.style.display = 'block';
 		var track = drums.tracks[trackIndex];
 		var event = track.events[tickIndex];
-	}
-	
-	public function close() {
-		container.style.display = 'none';
 	}
 }

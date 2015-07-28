@@ -242,8 +242,9 @@ class CellUI extends Graphics {
 		editEvent.emit(trackIndex, tickIndex);
 	}
 
+	
 	function onPressCancel(target:DisplayObject) {
-		if (target.parent != parent) return;
+		if (target != null && target.parent != parent) return;
 		fading = true;
 		isDown = false;
 	}
