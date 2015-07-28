@@ -9,7 +9,7 @@ body {
 	height:445px;
 	margin: 0 auto;
 	position:relative;
-	transform: translateZ(0); /*fix compositing*/
+	/*transform: translateZ(0); fix compositing*/
 }
 
 button.iconbutton {

@@ -1,5 +1,5 @@
 body{color:#aaa;background-color:#191B1C;}
-#pixi-container{width:898px;height:445px;margin:0 auto;position:relative;transform:translateZ(0);}
+#pixi-container{width:898px;height:445px;margin:0 auto;position:relative;}
 button.iconbutton{height:48px;min-width:48px;}
 button.iconbutton i{font-size:48px;position:relative;top:0px;}
 .spin-container{width:28px;height:28px;margin:208px auto;padding-left:14px;}
