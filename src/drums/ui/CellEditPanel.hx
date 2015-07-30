@@ -1,7 +1,6 @@
 package drums.ui;
 import drums.DrumSequencer;
 import drums.DrumSequencer.TrackEvent;
-import drums.ui.Button;
 import drums.ui.celledit.CellInfoPanel;
 import drums.ui.celledit.OscilliscopePanel;
 import drums.ui.celledit.WaveformPanel;
@@ -11,6 +10,9 @@ import js.Browser;
 import js.html.Element;
 import js.html.InputElement;
 import js.JQuery;
+import parameter.Mapping.InterpolationExponential;
+import parameter.Mapping.InterpolationLinear;
+import parameter.Parameter;
 import pixi.core.display.Container;
 import pixi.core.display.DisplayObject;
 import pixi.core.graphics.Graphics;
@@ -38,7 +40,6 @@ class CellEditPanel extends Container {
 
 	var uiContainer:Container;
 	var cellInfo:CellInfoPanel;
-	var playButton:Button;
 	var waveform:WaveformPanel;
 	var oscilliscope:OscilliscopePanel;
 	var controls:drums.ui.CellEditPanel.CellEditControls;
@@ -62,41 +63,36 @@ class CellEditPanel extends Container {
 
 		setupUI(pointer);
 
-		controls = new CellEditControls();
+		controls = new CellEditControls(drums);
 		controls.close.connect(close);
 		controls.play.connect(playNow);
-		
-		//pointer.watch(bg);
-		//pointer.click.connect(onClick);
+		controls.editNextPrev.connect(function(i) {
+			edit(controls.trackIndex, i);
+		});
 	}
 
-
-	//function onClick(target:DisplayObject) {
-		//if (target.parent == uiContainer) {
-			//switch (target){
-				//case playButton: playNow();
-			//}
-		//}
-	//}
 	
-
 	public function edit(trackIndex:Int, tickIndex:Int) {
+		
+		var sameTrack = this.trackIndex == trackIndex;
+		
 		this.trackIndex = trackIndex;
 		this.tickIndex = tickIndex;
 		
-		visible = launching = true;
-		fadeUI = closing = false;
-
-		bgSize = 0;
-		uiContainer.alpha = 0;
-
+		if (!sameTrack) {
+			visible = launching = true;
+			fadeUI = closing = false;
+			bgSize = 0;
+			uiContainer.alpha = 0;
+		}
+		
 		event = drums.tracks[trackIndex].events[tickIndex];
 
 		waveform.setup(drums, trackIndex, tickIndex);
 
 		cellInfo.update(drums, trackIndex, tickIndex);
 		
-		controls.update(drums, trackIndex, tickIndex);
+		controls.update(trackIndex, tickIndex);
 	}
 
 
@@ -109,7 +105,8 @@ class CellEditPanel extends Container {
 		closing = true;
 		launching = false;
 		uiContainer.alpha = 0;
-		
+		trackIndex = -1;
+		tickIndex = -1;
 		closed.emit();
 	}
 
@@ -137,7 +134,7 @@ class CellEditPanel extends Container {
 
 			if (fadeUI && uiContainer.alpha < 1) {
 				uiContainer.alpha += .09;
-				controls.container.style.opacity = ''+uiContainer.alpha;
+				controls.container.style.opacity = '${uiContainer.alpha}';
 				if (uiContainer.alpha >= 1) {
 					uiContainer.alpha = 1;
 					fadeUI = false;
@@ -164,12 +161,7 @@ class CellEditPanel extends Container {
 		bg.endFill();
 
 		cellInfo = new CellInfoPanel();
-		playButton = new Button(90, 84);
-		//playButton = new LabelButton(90, 84, 'Play');
-		playButton.position.set(225, 0);
-		pointer.watch(playButton);
-
-
+		
 		oscilliscope = new OscilliscopePanel(drums, trackIndex, tickIndex);
 		oscilliscope.y = 98;
 
@@ -178,7 +170,6 @@ class CellEditPanel extends Container {
 
 		uiContainer.addChild(bg);
 		uiContainer.addChild(cellInfo);
-		uiContainer.addChild(playButton);
 
 		uiContainer.addChild(oscilliscope);
 		uiContainer.addChild(waveform);
@@ -195,6 +186,8 @@ class CellEditPanel extends Container {
 	}
 
 	function onClosed() {
+		trackIndex = -1;
+		tickIndex = -1;
 		closing = visible = false;
 		bgSize = 0;
 	}
@@ -251,31 +244,180 @@ class CellEditPanel extends Container {
 
 class CellEditControls {
 	
-	public var container:Element;
+	public var cellOffset(default, null):Parameter<Float, InterpolationLinear>;
+	public var cellDuration(default, null):Parameter<Float, InterpolationLinear>;
+	public var cellRate(default, null):Parameter<Float, InterpolationLinear>;
+	public var cellVolume(default, null):Parameter<Float, InterpolationExponential>;
+	public var cellPan(default, null):Parameter<Float, InterpolationLinear>;
+	public var cellAttack(default, null):Parameter<Float, InterpolationExponential>;
+	//public var cellRelease(default, null):Parameter<Float, InterpolationExponential>;
 	
+	public var editNextPrev(default, null):Signal<Int->Void>;
 	public var close(default, null):Signal<Void->Void>;
 	public var play(default, null):Signal<Void->Void>;
+	
+	public var container(default, null):Element;
+	
+	public var tickIndex(default, null):Int;
+	public var trackIndex(default, null):Int;
 
-	public function new() {
+	var drums:DrumSequencer;
+	
+	public function new(drums:DrumSequencer) {
+		
+		trackIndex = -1;
+		tickIndex = -1;
+		this.drums = drums;
 		
 		container = Browser.document.getElementById('cell-edit-controls');
 		
 		close = new Signal<Void->Void>();
 		play = new Signal<Void->Void>();
+		editNextPrev = new Signal<Int->Void>();
 		
 		new JQuery('#cell-edit-play-button').on('click tap', function(_) {
 			play.emit();
 		});
 		new JQuery('#cell-edit-close-button').on('click tap', function(_) {
 			close.emit();
+			tickIndex = -1;
+			trackIndex = - 1;
 			container.style.display = 'none';
 		});
+		
+		new JQuery('#cell-edit-next-button').on('click tap', function(_) {
+			tickIndex++;
+			if (tickIndex >= drums.tracks[trackIndex].events.length) tickIndex = 0;
+			editNextPrev.emit(tickIndex);
+		});
+		new JQuery('#cell-edit-prev-button').on('click tap', function(_) {
+			tickIndex--;
+			if (tickIndex < 0) tickIndex += drums.tracks[trackIndex].events.length;
+			editNextPrev.emit(tickIndex);
+		});
+		
+		setupSliders();
 	}
 	
-	public function update(drums:DrumSequencer, trackIndex:Int, tickIndex:Int) {
-		container.style.opacity = '0';
-		container.style.display = 'block';
+	
+	public function update(trackIndex:Int, tickIndex:Int) {
+		
+		var sameTrack = this.trackIndex == trackIndex;
+		
+		this.trackIndex = trackIndex;
+		this.tickIndex = tickIndex;
+		
+		if (!sameTrack) {
+			container.style.opacity = '0';
+			container.style.display = 'block';
+		}
+		
 		var track = drums.tracks[trackIndex];
 		var event = track.events[tickIndex];
+		var duration = track.source.buffer.duration;
+		
+		cellDuration.setValue(event.duration / duration, false, true); 
+		cellOffset.setValue(event.offset / event.duration, false, true);		
+		
+		trace(cellDuration.getValue());
+		trace(cellOffset.getValue());
+		 
+		cellRate.setValue(event.rate, false, true); //
+		
+		cellVolume.setValue(event.volume, false, true);	//
+		
+		cellPan.setValue(event.pan, false, true);
+		cellAttack.setValue(event.attack, false, true);		
+		//cellRelease.setValue(event.release, false, true);
 	}
+	
+	
+	function setupSliders() { 
+		
+		var id = 'cell-offset-slider';
+		var slider:InputElement = cast Browser.document.getElementById(id);
+		cellOffset = new Parameter<Float, InterpolationLinear>('cellOffsetSlider', Std.parseInt(slider.min), Std.parseFloat(slider.max));
+		setupParameterSlider(untyped cellOffset, slider, false);
+		
+		id = 'cell-duration-slider';
+		slider = cast Browser.document.getElementById(id);
+		cellDuration = new Parameter<Float, InterpolationLinear>('cellDurationSlider', Std.parseInt(slider.min), Std.parseFloat(slider.max));
+		setupParameterSlider(untyped cellDuration, slider, false);
+		
+		id = 'cell-rate-slider';
+		slider = cast Browser.document.getElementById(id);
+		cellRate  = new Parameter<Float, InterpolationLinear>('cellRateSlider', Std.parseInt(slider.min), Std.parseFloat(slider.max));
+		setupParameterSlider(untyped cellRate, slider, false);
+		
+		
+		id = 'cell-volume-slider';
+		slider = cast Browser.document.getElementById(id);
+		cellVolume = new Parameter<Float, InterpolationExponential>('cellVolumeSlider', Std.parseInt(slider.min), Std.parseFloat(slider.max));
+		setupParameterSlider(untyped cellVolume, slider, false);		
+		
+		id = 'cell-pan-slider';
+		slider = cast Browser.document.getElementById(id);
+		cellPan = new Parameter<Float, InterpolationLinear>('cellPanSlider', Std.parseInt(slider.min), Std.parseFloat(slider.max));
+		setupParameterSlider(untyped cellPan, slider, false);
+		
+		id = 'cell-attack-slider';
+		slider = cast Browser.document.getElementById(id);
+		cellAttack = new Parameter<Float, InterpolationExponential>('cellAttackSlider', Std.parseInt(slider.min), Std.parseFloat(slider.max));
+		setupParameterSlider(untyped cellAttack, slider, false);
+		//
+		//id = 'cell-release-slider';
+		//slider = cast Browser.document.getElementById(id);
+		//cellRelease = new Parameter<Float, InterpolationExponential>('cellReleaseSlider', Std.parseInt(slider.min), Std.parseFloat(slider.max));
+		//setupParameterSlider(untyped cellRelease, slider, false);
+		
+		
+		cellOffset.addObserver(cellOffsetHandler);	
+		cellDuration.addObserver(cellDurationHandler);
+		cellRate.addObserver(cellRateHandler);
+		cellVolume.addObserver(cellVolumeHandler);
+		cellPan.addObserver(cellPanHandler);
+		cellAttack.addObserver(cellAttackHandler);
+		//cellRelease.addObserver(cellReleaseHandler);
+	}
+	
+	
+	function setupParameterSlider(parameter, slider:InputElement, normalised:Bool) {
+		parameter.addObserver(function(p) {
+			var val = p.getValue(normalised);
+			untyped slider.MaterialSlider.change(val);
+			new JQuery(slider).parent().siblings('div[for="${slider.id}"]').text('${val}');
+		});
+		new JQuery(slider).on('input change', function(_) { parameter.setValue(slider.valueAsNumber, normalised); });
+	}
+	
+	
+	function cellOffsetHandler(p:Parameter<Float, InterpolationLinear>) {
+		var track = drums.tracks[trackIndex];
+		track.events[tickIndex].offset = p.getValue() * track.source.buffer.duration * cellDuration.getValue();
+	}
+	
+	function cellDurationHandler(p:Parameter<Float, InterpolationLinear>) {
+		var track = drums.tracks[trackIndex];
+		track.events[tickIndex].duration = p.getValue() * track.source.buffer.duration;
+	}
+	
+	function cellRateHandler(p:Parameter<Float, InterpolationLinear>) {
+		drums.tracks[trackIndex].events[tickIndex].rate = p.getValue();
+	}
+	
+	function cellVolumeHandler(p:Parameter<Float, InterpolationExponential>) {
+		drums.tracks[trackIndex].events[tickIndex].volume = p.getValue();
+	}
+	
+	function cellPanHandler(p:Parameter<Float, InterpolationLinear>) { 
+		drums.tracks[trackIndex].events[tickIndex].pan = p.getValue();
+	}
+	
+	function cellAttackHandler(p:Parameter<Float, InterpolationExponential>) { 
+		drums.tracks[trackIndex].events[tickIndex].attack = p.getValue();
+	}
+	
+	//function cellReleaseHandler(p:Parameter<Float, InterpolationExponential>) { 
+		//drums.tracks[trackIndex].events[tickIndex].release = p.getValue();
+	//}
 }

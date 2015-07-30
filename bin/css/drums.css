@@ -1,6 +1,6 @@
 
 body {
-	color: #aaa;
+	color: #fff;
 	background-color: #191B1C;
 }
 
@@ -96,10 +96,16 @@ button.iconbutton i {
 	left: 270px;
 }
 
+
+#cell-edit-controls .container .cell-next-prev {
+	position: absolute;
+	top: 32px;
+	left: 160px;
+}
+
 #cell-edit-controls .container .cell-edit-sliders {
 	position: absolute;
 	width: 826px;
-	color:#fefefe;
 	background-color: rgb(12, 120, 208);
 	top: 256px;
 	left: 26px;

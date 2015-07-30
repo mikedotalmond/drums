@@ -14,20 +14,20 @@ class CellInfoPanel extends UIElement {
 
 	public function new() {
 
-		super(210, 84);
+		super(315, 84);
 
 		// Ubuntu - 300,400,700
-		cellIndex = new Text('01', { font : '400 20px Roboto', fill : '#00ffbe', align:'center',
-			dropShadow:true, dropShadowAngle:0, dropShadowDistance:1, dropShadowColor:'#008ECC'
+		cellIndex = new Text('01', { font : '500 20px Roboto', fill : 'white', align:'center',
+			dropShadow:false, dropShadowAngle:0, dropShadowDistance:1, dropShadowColor:'#FF4081'
 		});
 
 		cellIndex.position.set(15, 10);
 
-		trackName = new Text('Cowbell', { font : '400 26px Roboto', fill : 'white', align : 'center',
+		trackName = new Text('Cowbell', { font : '200 26px Roboto', fill : 'white', align : 'center',
 			dropShadow:true, dropShadowAngle:0, dropShadowDistance:1, dropShadowColor:'#008ECC'
 		});
 
-		duration = new Text('00.000 s', { font : '400 16px Roboto', fill : 'white', align : 'center',
+		duration = new Text('00.000', { font : '500 16px Roboto', fill : 'white', align : 'center',
 			dropShadow:true, dropShadowAngle:0, dropShadowDistance:1, dropShadowColor:'#008ECC'
 		});
 
