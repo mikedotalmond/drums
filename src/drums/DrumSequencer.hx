@@ -163,7 +163,7 @@ class DrumSequencer {
 
 		s.volume = event.volume;
 		s.attack = event.attack;
-		s.release = event.release;
+		//s.release = event.release;
 		s.offset = event.offset;
 		s.duration = event.duration;
 		s.playbackRate = event.rate;
@@ -185,7 +185,7 @@ class DrumSequencer {
 				var s = track.source;
 				s.volume = event.volume;
 				s.attack = event.attack;
-				s.release = event.release;
+				//s.release = event.release;
 				s.offset = event.offset;
 				s.duration = event.duration;
 				s.playbackRate = event.rate;
@@ -257,7 +257,7 @@ class Track {
 		source.buffer = buffer;
 
 		events = [for (i in 0...stepCount)
-			{ active:false, id:-1, volume:1, pan:0, rate:1, attack:0, release:buffer.duration, offset:0, duration:buffer.duration }
+			{ active:false, id:-1, volume:1, pan:0, rate:1, attack:0, offset:0, duration:buffer.duration }
 		];
 	}
 
@@ -269,23 +269,16 @@ class Track {
 		for (i in 0...stepCount) {
 			var rate = 1.1 - ((1 + Math.random()*i) / stepCount);
 			if (Math.random() < .5) rate = 2 - rate;
+			if (rate <= 0) rate = 1;
+			
 			var e = events[i];
 			e.active = Std.int(16 * Math.random()) % Std.int(Math.random() * 16) == 0;
-			e.volume = .7 + Math.random() * .3;
+			e.volume = .5 + Math.random() * 2;
 			e.pan = Math.random() * ( -.5 + (i / (stepCount * 2)));
 			e.rate = rate;
-			e.release = buffer.duration / rate;
-		}
-	}
-
-
-	public function setEvent(index:Int, active:Bool, ?volume:Float, ?pan:Float, ?rate:Float, ?release:Float) {
-		var e = events[index];
-		if ((e.active = active)) {
-			e.volume = volume;
-			e.pan = pan;
-			e.rate = rate;
-			e.release = release;
+			e.duration = source.buffer.duration * Math.random();
+			e.offset = e.duration * Math.random() * .01;
+			e.attack = .01 * Math.random();
 		}
 	}
 	
@@ -327,7 +320,7 @@ typedef TrackEvent = {
 	var pan:Float;
 	var rate:Float;
 	var attack:Float;
-	var release:Float;
+	//var release:Float;
 	var offset:Float;
 	var duration:Float;
 }
