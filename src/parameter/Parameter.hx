@@ -95,6 +95,10 @@ class ParameterBase<T,I> {
 			change.disconnect(callback);
 		}
 	}
+	
+	public function removeAllObservers() {
+		change.disconnectAll();
+	}
 
 	public function toString():String {
 		return '[Parameter] ${name}, defaultValue:${defaultValue}, mapping:${mapping.toString()}';
@@ -103,7 +107,7 @@ class ParameterBase<T,I> {
 
 
 @:multiType
-@:forward(name, defaultValue, normalisedValue, normalisedDefaultValue, mapping, change, setValue, getValue, setDefault, setToDefault, invert, addObservers, addObserver, removeObserver, toString)
+@:forward(name, defaultValue, normalisedValue, normalisedDefaultValue, mapping, change, setValue, getValue, setDefault, setToDefault, invert, addObservers, addObserver, removeObserver, removeAllObservers, toString)
 abstract Parameter<T,I>(ParameterBase<T,I>) {
 
     public function new(name:String, min:T, max:T);
