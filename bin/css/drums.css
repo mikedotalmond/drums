@@ -92,8 +92,8 @@ button.iconbutton i {
 
 #cell-edit-controls .container .cell-play-button {
 	position: absolute;
-	top: 36px;
-	left: 753px;
+	top: 182px;
+	left: 825px;
 }
 
 #cell-edit-controls .container .cell-play-button > button {
@@ -105,13 +105,6 @@ button.iconbutton i {
 	top: 36px;
 	left: 789px;
 }
-
-#cell-edit-controls .container .cell-random-button {
-	position: absolute;
-	top: 182px;
-	left: 825px;
-}
-
 
 #cell-edit-controls .container .cell-edit-sliders {
 	position: absolute;
