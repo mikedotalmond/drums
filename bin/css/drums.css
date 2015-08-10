@@ -92,16 +92,26 @@ button.iconbutton i {
 
 #cell-edit-controls .container .cell-play-button {
 	position: absolute;
-	top: 40px;
-	left: 270px;
+	top: 36px;
+	left: 753px;
 }
 
+#cell-edit-controls .container .cell-play-button > button {
+	color:inherit;
+}
 
 #cell-edit-controls .container .cell-next-prev {
 	position: absolute;
-	top: 32px;
-	left: 160px;
+	top: 36px;
+	left: 789px;
 }
+
+#cell-edit-controls .container .cell-random-button {
+	position: absolute;
+	top: 182px;
+	left: 825px;
+}
+
 
 #cell-edit-controls .container .cell-edit-sliders {
 	position: absolute;

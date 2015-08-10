@@ -2,7 +2,6 @@ package drums.ui;
 import drums.DrumSequencer;
 import drums.DrumSequencer.TrackEvent;
 import drums.ui.celledit.CellInfoPanel;
-import drums.ui.celledit.OscilliscopePanel;
 import drums.ui.celledit.WaveformPanel;
 import drums.ui.UIElement;
 import hxsignal.Signal;
@@ -41,7 +40,6 @@ class CellEditPanel extends Container {
 	var uiContainer:Container;
 	var cellInfo:CellInfoPanel;
 	var waveform:WaveformPanel;
-	var oscilliscope:OscilliscopePanel;
 	var controls:drums.ui.CellEditPanel.CellEditControls;
 
 
@@ -160,19 +158,12 @@ class CellEditPanel extends Container {
 		bg.drawRect(x,y,w,h);
 		bg.endFill();
 
+		waveform = new WaveformPanel();
 		cellInfo = new CellInfoPanel();
 		
-		oscilliscope = new OscilliscopePanel(drums, trackIndex, tickIndex);
-		oscilliscope.y = 98;
-
-		waveform = new WaveformPanel();
-		waveform.x = 330;
-
 		uiContainer.addChild(bg);
-		uiContainer.addChild(cellInfo);
-
-		uiContainer.addChild(oscilliscope);
 		uiContainer.addChild(waveform);
+		uiContainer.addChild(cellInfo);
 
 		uiContainer.alpha = 0;
 		addChild(uiContainer);
@@ -319,9 +310,10 @@ class CellEditControls {
 		cellDuration.setValue(event.duration / duration, false, true); 
 		cellOffset.setValue(event.offset / event.duration, false, true);		
 		
-		trace(cellDuration.getValue());
-		trace(cellOffset.getValue());
-		 
+		//trace(cellDuration.getValue());
+		//trace(cellOffset.getValue());
+		
+		//for(var i in .)
 		cellRate.setValue(event.rate, false, true); //
 		
 		cellVolume.setValue(event.volume, false, true);	//

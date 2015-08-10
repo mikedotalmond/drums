@@ -12,9 +12,9 @@ class WaveformPanel extends UIElement {
 	var waveform:Waveform;
 
 	public function new() {
-		super(510, 198);
+		super(840, 198);
 
-		waveform = new Waveform(510, 198);
+		waveform = new Waveform(840, 198);
 
 		//seq.tick.connect();
 		//seq.isPlaying(0);
@@ -36,6 +36,6 @@ class WaveformPanel extends UIElement {
 		super.drawBg(w, h);
 		bg.lineStyle(1, 0x60CEFF);
 		bg.moveTo(0, h/2);
-		bg.lineTo(509, h/2);
+		bg.lineTo(840,h/2);
 	}
 }

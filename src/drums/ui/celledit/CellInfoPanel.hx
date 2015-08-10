@@ -10,30 +10,27 @@ class CellInfoPanel extends UIElement {
 
 	var trackName:Text;
 	var cellIndex:Text;
-	var duration:Text;
+	//var duration:Text;
 
 	public function new() {
 
-		super(315, 84);
+		super(120, 84);
+		removeChild(bg);
+		//bg.alpha = .25;
 
-		// Ubuntu - 300,400,700
-		cellIndex = new Text('01', { font : '500 20px Roboto', fill : 'white', align:'center',
-			dropShadow:false, dropShadowAngle:0, dropShadowDistance:1, dropShadowColor:'#FF4081'
-		});
-
-		cellIndex.position.set(15, 10);
+		//cellIndex = new Text('01', { font : '200 20px Roboto', fill : 'white', align:'center',
+			//dropShadow:true, dropShadowAngle:90, dropShadowDistance:2, dropShadowColor:'#0C78D0'
+		//});
 
 		trackName = new Text('Cowbell', { font : '200 26px Roboto', fill : 'white', align : 'center',
-			dropShadow:true, dropShadowAngle:0, dropShadowDistance:1, dropShadowColor:'#008ECC'
+			dropShadow:true, dropShadowAngle:0, dropShadowDistance:3, dropShadowColor:'#0C78D0'
 		});
 
-		duration = new Text('00.000', { font : '500 16px Roboto', fill : 'white', align : 'center',
-			dropShadow:true, dropShadowAngle:0, dropShadowDistance:1, dropShadowColor:'#008ECC'
-		});
+		//cellIndex.position.set(180, 15);
+		trackName.position.set(15, 10);
 
-		addChild(cellIndex);
+		//addChild(cellIndex);
 		addChild(trackName);
-		addChild(duration);
 	}
 
 
@@ -41,13 +38,13 @@ class CellInfoPanel extends UIElement {
 		var ii = i + 1, jj = j + 1;
 		var track = sequencer.tracks[i];
 
-		cellIndex.text = jj < 10 ? '0$jj/16': '$jj/16';
+		trackName.text = track.name + ' (' +  (jj < 10 ? '0$jj/16)': '$jj/16)');
+		
+		//cellIndex.text = (jj < 10 ? '0$jj/16': '$jj/16');
 
-		duration.text = '${floatToStringPrecision(track.source.duration,4)}';
-		duration.position.set(195 - duration.width, 50);
+		//duration.text = '${floatToStringPrecision(track.source.duration,4)}';
+		//duration.position.set(195 - duration.width, 50);
 
-		trackName.text = track.name;
-		trackName.position.set(15, 40);
 	}
 
 

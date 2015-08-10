@@ -14,7 +14,9 @@ button.iconbutton i{font-size:48px;position:relative;top:0px;}
 .sequencer-grid{background-color:rgb(18,19,20);}
 #cell-edit-controls{display:none;position:relative;z-index:1;}
 #cell-edit-controls .container #cell-edit-close-button{position:absolute;right:-8px;top:-8px;}
-#cell-edit-controls .container .cell-play-button{position:absolute;top:40px;left:270px;}
-#cell-edit-controls .container .cell-next-prev{position:absolute;top:32px;left:160px;}
+#cell-edit-controls .container .cell-play-button{position:absolute;top:36px;left:753px;}
+#cell-edit-controls .container .cell-play-button>button{color:inherit;}
+#cell-edit-controls .container .cell-next-prev{position:absolute;top:36px;left:789px;}
+#cell-edit-controls .container .cell-random-button{position:absolute;top:182px;left:825px;}
 #cell-edit-controls .container .cell-edit-sliders{position:absolute;width:826px;background-color:rgb(12,120,208);top:256px;left:26px;padding:12px 8px;}
 #cell-edit-controls .container .cell-edit-sliders label>p{float:left;}
