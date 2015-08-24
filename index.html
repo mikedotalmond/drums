@@ -34,7 +34,7 @@
 		
 			<!-- Navigation. We hide it in small screens. -->
 			<nav class="mdl-navigation mdl-layout--large-screen-only">
-				<a class="mdl-navigation__link" href="">Link</a>
+				<a class="mdl-navigation__link" href="https://github.com/mikedotalmond/drums">Source</a>
 			</nav>
 			
 		</div>
@@ -49,7 +49,7 @@
 			<button class="iconbutton mdl-button mdl-js-button mdl-button--primary  mdl-js-ripple-effect">
 				<i class="material-icons ">play_circle_outline</i> 
 			</button>
-		  <a class="mdl-navigation__link" href="">Link</a>
+		  <a class="mdl-navigation__link" href="https://github.com/mikedotalmond/drums">Source code</a>
 		</nav>
 	  </div>
 		
@@ -78,17 +78,28 @@
 					<button id="record-button" style="float:left" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-js-ripple-effect">
 						<i class="material-icons ">album</i>
 					</button>
-					<div class="mdl-tooltip" for="record-button">Record</div>
+					<div class="mdl-tooltip" for="record-button">Record - start</div>
+					<!-- TODO:
+					<button id="save-recording-button" style="float:left" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-js-ripple-effect">
+						<i class="material-icons ">file_download</i>
+					</button>
+					<div class="mdl-tooltip" for="save-recording-button">Record - save</div>
+				
+					<button id="clear-recording-button" style="float:left" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-js-ripple-effect">
+						<i class="material-icons ">clear</i>
+					</button>					
+					<div class="mdl-tooltip" for="clear-recording-button">Record - clear</div>
+					-->
 				</div>				
 				
 				<div class="mdl-layout-spacer"></div>	
 				
-				<div class="mdl-cell mdl-cell--3-col bpm-slider">
+				<div class="mdl-cell mdl-cell--3-col label-sldier">
 					<label for="bpm-slider"><p style="float:left;">BPM</p></label>
 					<input class="mdl-slider mdl-js-slider " type="range" id="bpm-slider" min="60" max="200" value="120" step="1" />
 					<div class="mdl-tooltip" for="bpm-slider">120</div>
 				</div>
-				<div class="mdl-cell mdl-cell--2-col bpm-slider">
+				<div class="mdl-cell mdl-cell--2-col label-sldier">
 					<label for="swing-slider"><p style="float:left;">Swing</p></label>
 					<input class="mdl-slider mdl-js-slider" type="range" id="swing-slider" min="0" max="0.5" value="0" step="0.01" />
 					<div class="mdl-tooltip" for="swing-slider">0%</div>
@@ -96,7 +107,7 @@
 				
 				<div class="mdl-layout-spacer"></div>	
 				
-				<div class="mdl-cell mdl-cell--3-col bpm-slider">
+				<div class="mdl-cell mdl-cell--3-col label-sldier">
 					<button id="mute-button" style="float:right;" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary mdl-js-ripple-effect">
 						<i class="material-icons ">volume_up</i>
 					</button>	
@@ -244,10 +255,69 @@
 							<div class="mdl-spinner mdl-spinner--single-color mdl-js-spinner is-active"></div>
 						</div>
 						
-						<button id="close-cell-edit" style="display:none; position: absolute; right: -8px; top:-8px; z-index: 1;" 
-								class="mdl-button mdl-js-button mdl-button--icon mdl-button--fab mdl-button--accent mdl-js-ripple-effect">
-						  <i class="material-icons">clear</i>
-						</button>  
+						<div id="cell-edit-controls">
+							<div class="container">
+								<button id="cell-edit-close-button" class="mdl-button mdl-js-button mdl-button--icon mdl-button--fab mdl-button--accent mdl-js-ripple-effect">
+								  <i class="material-icons">clear</i>
+								</button>
+								
+								<div class="cell-next-prev">
+									<div class="mdl-tooltip" for="cell-edit-prev-button">edit previous (&larr;)</div>
+									<button id="cell-edit-prev-button"class="mdl-button mdl-js-button mdl-button--icon mdl-button--fab mdl-js-ripple-effect">
+										<i class="material-icons ">keyboard_arrow_left</i>
+									</button>
+									<div class="mdl-tooltip" for="cell-edit-next-button">edit next (&rarr;)</div>									
+									<button id="cell-edit-next-button"class="mdl-button mdl-js-button mdl-button--icon mdl-button--fab mdl-js-ripple-effect">
+										<i class="material-icons ">keyboard_arrow_right</i>
+									</button>
+								</div>
+								
+									
+								<div class="cell-play-button">
+									<div class="mdl-tooltip" for="cell-edit-play-button">play (p)</div>									
+									<button id="cell-edit-play-button"class="mdl-button mdl-js-button mdl-button--icon mdl-button--fab mdl-js-ripple-effect">
+										<i class="material-icons ">play_arrow</i>
+									</button>
+								</div>
+									
+								<div class="mdl-grid cell-edit-sliders" style="top: 241px;">
+									<div class="mdl-cell mdl-cell--4-col label-sldier">
+										<div class="mdl-tooltip" for="cell-offset-slider">0</div>
+										<label for="cell-offset-slider"><p>Offset</p></label>
+										<input class="mdl-slider mdl-js-slider" type="range" id="cell-offset-slider" min="0.0" max="1.0" value="0.0" step="0.01" />
+									</div>
+									<div class="mdl-cell mdl-cell--4-col label-sldier">
+										<div class="mdl-tooltip" for="cell-duration-slider">1</div>
+										<label for="cell-duration-slider"><p>Duration</p></label>
+										<input class="mdl-slider mdl-js-slider" type="range" id="cell-duration-slider" min="0.0" max="1.0" value="1.0" step="0.01" />
+									</div>									
+									<div class="mdl-cell mdl-cell--4-col label-sldier">
+										<div class="mdl-tooltip" for="cell-rate-slider">1</div>
+										<label for="cell-rate-slider"><p>Rate</p></label>
+										<input class="mdl-slider mdl-js-slider" type="range" id="cell-rate-slider" min="0.01" max="4.0" value="1.0" step="0.01" />
+									</div>
+								</div>
+								
+								<div class="mdl-grid cell-edit-sliders" style="top: 339px;">
+									<div class="mdl-cell mdl-cell--4-col label-sldier">
+										<div class="mdl-tooltip" for="cell-volume-slider">1</div>
+										<label for="cell-volume-slider"><p>Gain</p></label>
+										<input class="mdl-slider mdl-js-slider" type="range" id="cell-volume-slider" min="0.0" max="3.0" value="1.0" step="0.01" />
+									</div>
+									<div class="mdl-cell mdl-cell--4-col label-sldier">
+										<div class="mdl-tooltip" for="cell-pan-slider">0</div>
+										<label for="cell-pan-slider"><p>Pan</p></label>
+										<input class="mdl-slider mdl-js-slider" type="range" id="cell-pan-slider" min="-1.0" max="1.0" value="0.0" step="0.01" />
+									</div>								
+									<div class="mdl-cell mdl-cell--4-col label-sldier">
+										<div class="mdl-tooltip" for="cell-attack-slider">0</div>
+										<label for="cell-attack-slider"><p>Attack</p></label>
+										<input class="mdl-slider mdl-js-slider" type="range" id="cell-attack-slider" min="0.0" max="0.2" value="0.0" step="0.001" />
+									</div>
+								</div>
+							
+							</div>
+						</div>
 						
 						<div id="pixi-container" style="display:none;"></div>
 					</div>					

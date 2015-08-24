@@ -13,15 +13,6 @@ HxOverrides.cca = function(s,index) {
 	if(x != x) return undefined;
 	return x;
 };
-HxOverrides.substr = function(s,pos,len) {
-	if(pos != null && pos != 0 && len != null && len < 0) return "";
-	if(len == null) len = s.length;
-	if(pos < 0) {
-		pos = s.length + pos;
-		if(pos < 0) pos = 0;
-	} else if(len < 0) len = s.length + len - pos;
-	return s.substr(pos,len);
-};
 HxOverrides.iter = function(a) {
 	return { cur : 0, arr : a, hasNext : function() {
 		return this.cur < this.arr.length;
@@ -181,11 +172,15 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 			_g.randomise = p3.getValue();
 		});
 		this.controls.recordToggle.addObserver(function(p4) {
-			if(p4.getValue()) {
+			if(!_g.recorder.recording && p4.getValue()) {
+				if(!_g.drums.playing) {
+					p4.setValue(false);
+					return;
+				}
 				console.log("recording...");
 				_g.recorder.worker.postMessage(tones_utils_AudioNodeRecorder.ClearBufferMessage);
 				_g.recorder.recording = true;
-			} else {
+			} else if(_g.recorder.recording) {
 				console.log("stopped recording");
 				_g.recorder.recording = false;
 				console.log("encoding wav");
@@ -420,7 +415,6 @@ drums_DrumSequencer.prototype = {
 		track.set_pan(event.pan);
 		s.set_volume(event.volume);
 		s.set_attack(event.attack);
-		s.set_release(event.release);
 		s.offset = event.offset;
 		s.duration = event.duration;
 		s.playbackRate = event.rate;
@@ -437,7 +431,6 @@ drums_DrumSequencer.prototype = {
 				var s = track.source;
 				s.set_volume(event.volume);
 				s.set_attack(event.attack);
-				s.set_release(event.release);
 				s.offset = event.offset;
 				s.duration = event.duration;
 				s.playbackRate = event.rate;
@@ -478,7 +471,7 @@ var drums_Track = function(name,buffer,context,destination) {
 	var _g1 = 0;
 	while(_g1 < 16) {
 		_g1++;
-		_g.push({ active : false, id : -1, volume : 1, pan : 0, rate : 1, attack : 0, release : buffer.duration, offset : 0, duration : buffer.duration});
+		_g.push({ active : false, id : -1, volume : 1, pan : 0, rate : 1, attack : 0, offset : 0, duration : buffer.duration});
 	}
 	tmp = _g;
 	this.events = tmp;
@@ -486,12 +479,12 @@ var drums_Track = function(name,buffer,context,destination) {
 drums_Track.__name__ = true;
 drums_Track.prototype = {
 	randomise: function() {
-		var buffer = this.source._buffer;
 		var _g = 0;
 		while(_g < 16) {
 			var i = _g++;
 			var rate = 1.1 - (1 + Math.random() * i) / 16;
 			if(Math.random() < .5) rate = 2 - rate;
+			if(rate <= 0) rate = 1;
 			var e = this.events[i];
 			var tmp;
 			var x = 16 * Math.random();
@@ -500,10 +493,12 @@ drums_Track.prototype = {
 			var x1 = Math.random() * 16;
 			tmp1 = x1 | 0;
 			e.active = tmp % tmp1 == 0;
-			e.volume = .7 + Math.random() * .3;
+			e.volume = .5 + Math.random() * 2;
 			e.pan = Math.random() * (-0.5 + i / 32);
 			e.rate = rate;
-			e.release = buffer.duration / rate;
+			e.duration = this.source._buffer.duration * Math.random();
+			e.offset = e.duration * Math.random() * .01;
+			e.attack = .01 * Math.random();
 		}
 	}
 	,mute: function(state) {
@@ -555,13 +550,13 @@ drums_Pointer.prototype = {
 		this.lastTime = t;
 		if(this.isDown) {
 			this.timeDown += dt;
-			if(this.timeDown - 266 > 500) {
+			if(this.timeDown - 250 > 400) {
 				this.longPress.emit(this.currentTarget);
 				this.isDown = false;
 				this.timeDown = 0;
-			} else if(this.timeDown > 266) this.pressProgress.emit(this.currentTarget,(this.timeDown - 266) / 500);
+			} else if(this.timeDown > 250) this.pressProgress.emit(this.currentTarget,(this.timeDown - 250) / 400);
 		} else if(this.timeDown > 0) {
-			if(this.timeDown < 266) this.click.emit(this.currentTarget);
+			if(this.timeDown < 250) this.click.emit(this.currentTarget);
 			this.pressCancel.emit(this.currentTarget);
 			this.timeDown = 0;
 		}
@@ -705,50 +700,12 @@ drums_ui_BeatLines.prototype = $extend(PIXI.Container.prototype,{
 	}
 	,__class__: drums_ui_BeatLines
 });
-var drums_ui_UIElement = function(width,height) {
-	PIXI.Container.call(this);
-	this.interactive = false;
-	this.bg = new PIXI.Graphics();
-	this.drawBg(width,height);
-	this.addChild(this.bg);
-};
-drums_ui_UIElement.__name__ = true;
-drums_ui_UIElement.__super__ = PIXI.Container;
-drums_ui_UIElement.prototype = $extend(PIXI.Container.prototype,{
-	drawBg: function(w,h) {
-		this.bg.clear();
-		this.bg.beginFill(2201331);
-		this.bg.drawRect(0,0,w,h);
-		this.bg.endFill();
-	}
-	,__class__: drums_ui_UIElement
-});
-var drums_ui_Button = function(width,height) {
-	drums_ui_UIElement.call(this,width,height);
-	this.buttonMode = true;
-	this.interactive = true;
-};
-drums_ui_Button.__name__ = true;
-drums_ui_Button.__super__ = drums_ui_UIElement;
-drums_ui_Button.prototype = $extend(drums_ui_UIElement.prototype,{
-	__class__: drums_ui_Button
-});
-var drums_ui_LabelButton = function(width,height,text) {
-	drums_ui_Button.call(this,width,height);
-	this.label = new PIXI.Text(text,{ font : "400 20px Roboto", fill : "white", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
-	this.addChild(this.label);
-	this.label.position.set(Math.round(45. - this.label.width / 2),Math.round(42.5 - this.label.height / 2));
-};
-drums_ui_LabelButton.__name__ = true;
-drums_ui_LabelButton.__super__ = drums_ui_Button;
-drums_ui_LabelButton.prototype = $extend(drums_ui_Button.prototype,{
-	__class__: drums_ui_LabelButton
-});
 var drums_ui_CellEditPanel = function(drums1,pointer,displayWidth,displayHeight) {
 	this.closing = false;
 	this.launching = false;
 	this.fadeUI = false;
 	this.bgSize = 0;
+	var _g = this;
 	PIXI.Container.call(this);
 	this.visible = false;
 	this.closed = new hxsignal_impl_Signal0();
@@ -759,46 +716,85 @@ var drums_ui_CellEditPanel = function(drums1,pointer,displayWidth,displayHeight)
 	this.bg.interactive = true;
 	this.addChild(this.bg);
 	this.setupUI(pointer);
-	pointer.watch(this.bg);
-	pointer.click.connect($bind(this,this.onClick));
+	this.controls = new drums_ui_CellEditControls(drums1);
+	this.controls.close.connect($bind(this,this.close));
+	this.controls.play.connect($bind(this,this.playNow));
+	this.controls.editNextPrev.connect(function(i) {
+		_g.edit(_g.controls.trackIndex,i);
+	});
 };
 drums_ui_CellEditPanel.__name__ = true;
 drums_ui_CellEditPanel.__super__ = PIXI.Container;
 drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
-	onClick: function(target) {
-		if(target.parent == this) this.close(); else if(target.parent == this.uiContainer) this.drums.playTrackCellNow(this.trackIndex,this.tickIndex);
-	}
-	,edit: function(trackIndex,tickIndex) {
+	edit: function(trackIndex,tickIndex) {
+		if(tickIndex > 15) tickIndex = 0; else if(tickIndex < 0) tickIndex = 15;
+		if(trackIndex > 7) trackIndex = 0; else if(trackIndex < 0) trackIndex = 7;
+		var sameTrack = this.trackIndex == trackIndex;
 		this.trackIndex = trackIndex;
 		this.tickIndex = tickIndex;
-		this.visible = this.launching = true;
-		this.fadeUI = this.closing = false;
-		this.bgSize = 0;
-		this.uiContainer.alpha = 0;
+		if(!this.visible) {
+			this.visible = this.launching = true;
+			this.fadeUI = this.closing = false;
+			this.bgSize = 0;
+			this.uiContainer.alpha = 0;
+		} else if(!sameTrack) {
+			this.visible = true;
+			this.launching = this.closing = false;
+			this.fadeUI = true;
+			this.bgSize = 1;
+			this.uiContainer.alpha = 0;
+		}
 		this.event = this.drums.tracks[trackIndex].events[tickIndex];
 		this.waveform.setup(this.drums,trackIndex,tickIndex);
 		this.cellInfo.update(this.drums,trackIndex,tickIndex);
+		this.controls.update(trackIndex,tickIndex);
+		window.removeEventListener("keydown",$bind(this,this.onKeyDown));
+		window.addEventListener("keydown",$bind(this,this.onKeyDown));
+	}
+	,onKeyDown: function(e) {
+		var _g = e.keyCode;
+		switch(_g) {
+		case 80:
+			this.drums.playTrackCellNow(this.trackIndex,this.tickIndex);
+			break;
+		case 37:
+			this.edit(this.trackIndex,this.tickIndex - 1);
+			break;
+		case 39:
+			this.edit(this.trackIndex,this.tickIndex + 1);
+			break;
+		case 38:
+			this.edit(this.trackIndex - 1,this.tickIndex);
+			break;
+		case 40:
+			this.edit(this.trackIndex + 1,this.tickIndex);
+			break;
+		}
 	}
 	,close: function() {
+		window.removeEventListener("keydown",$bind(this,this.onKeyDown));
 		this.bg.pivot.set(0,0);
 		this.bg.position.set(0,0);
 		this.bg.scale.set(1,1);
 		this.closing = true;
 		this.launching = false;
 		this.uiContainer.alpha = 0;
+		this.trackIndex = -1;
+		this.tickIndex = -1;
 		this.closed.emit();
 	}
 	,tick: function(index) {
-		if(index == this.tickIndex && this.event.active) this.waveform.play(this.event.duration);
+		if(index == this.tickIndex && this.event.active) this.waveform.play(this.event);
 	}
 	,update: function() {
 		if(!this.visible) return;
 		if(this.launching || this.closing) {
-			this.bgSize += this.launching?.07:-.07;
+			this.bgSize += this.launching?.08:-.07;
 			if(this.bgSize >= 1) this.onLaunched(); else if(this.bgSize <= 0) this.onClosed();
 			this.drawBg(this.bgSize);
 		} else if(this.fadeUI && this.uiContainer.alpha < 1) {
 			this.uiContainer.alpha += .09;
+			this.controls.container.style.opacity = "" + this.uiContainer.alpha;
 			if(this.uiContainer.alpha >= 1) {
 				this.uiContainer.alpha = 1;
 				this.fadeUI = false;
@@ -811,19 +807,11 @@ drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
 		bg.beginFill(819422);
 		bg.drawRect(-18.125,-18.,880,428);
 		bg.endFill();
-		this.cellInfo = new drums_ui_celledit_CellInfoPanel();
-		this.playButton = new drums_ui_LabelButton(90,84,"Play");
-		this.playButton.position.set(225,0);
-		pointer.watch(this.playButton);
-		this.oscilliscope = new drums_ui_celledit_OscilliscopePanel(this.drums,this.trackIndex,this.tickIndex);
-		this.oscilliscope.y = 98;
 		this.waveform = new drums_ui_celledit_WaveformPanel();
-		this.waveform.x = 330;
+		this.cellInfo = new drums_ui_celledit_CellInfoPanel();
 		this.uiContainer.addChild(bg);
-		this.uiContainer.addChild(this.cellInfo);
-		this.uiContainer.addChild(this.playButton);
-		this.uiContainer.addChild(this.oscilliscope);
 		this.uiContainer.addChild(this.waveform);
+		this.uiContainer.addChild(this.cellInfo);
 		this.uiContainer.alpha = 0;
 		this.addChild(this.uiContainer);
 	}
@@ -833,6 +821,8 @@ drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
 		this.fadeUI = true;
 	}
 	,onClosed: function() {
+		this.trackIndex = -1;
+		this.tickIndex = -1;
 		this.closing = this.visible = false;
 		this.bgSize = 0;
 	}
@@ -863,8 +853,161 @@ drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
 		this.bg.drawRect(startX,startY,left,down);
 		this.bg.endFill();
 	}
+	,playNow: function() {
+		this.drums.playTrackCellNow(this.trackIndex,this.tickIndex);
+	}
 	,__class__: drums_ui_CellEditPanel
 });
+var drums_ui_CellEditControls = function(drums1) {
+	var _g = this;
+	this.trackIndex = -1;
+	this.tickIndex = -1;
+	this.drums = drums1;
+	this.container = window.document.getElementById("cell-edit-controls");
+	this.close = new hxsignal_impl_Signal0();
+	this.play = new hxsignal_impl_Signal0();
+	this.editNextPrev = new hxsignal_impl_Signal1();
+	js.JQuery("#cell-edit-play-button").on("click tap",function(_) {
+		_g.play.emit();
+	});
+	js.JQuery("#cell-edit-close-button").on("click tap",function(_1) {
+		_g.close.emit();
+		_g.tickIndex = -1;
+		_g.trackIndex = -1;
+		_g.container.style.display = "none";
+	});
+	js.JQuery("#cell-edit-next-button").on("click tap",function(_2) {
+		_g.tickIndex++;
+		if(_g.tickIndex >= drums1.tracks[_g.trackIndex].events.length) _g.tickIndex = 0;
+		_g.editNextPrev.emit(_g.tickIndex);
+	});
+	js.JQuery("#cell-edit-prev-button").on("click tap",function(_3) {
+		_g.tickIndex--;
+		if(_g.tickIndex < 0) _g.tickIndex += drums1.tracks[_g.trackIndex].events.length;
+		_g.editNextPrev.emit(_g.tickIndex);
+	});
+	this.setupSliders();
+};
+drums_ui_CellEditControls.__name__ = true;
+drums_ui_CellEditControls.prototype = {
+	update: function(trackIndex,tickIndex) {
+		var sameTrack = this.trackIndex == trackIndex;
+		this.trackIndex = trackIndex;
+		this.tickIndex = tickIndex;
+		if(!sameTrack) {
+			this.container.style.opacity = "0";
+			this.container.style.display = "block";
+		}
+		var track = this.drums.tracks[trackIndex];
+		var event = track.events[tickIndex];
+		var duration = track.source._buffer.duration;
+		this.cellDuration.setValue(event.duration / duration,false,true);
+		this.cellOffset.setValue(event.offset / event.duration,false,true);
+		this.cellRate.setValue(event.rate,false,true);
+		this.cellVolume.setValue(event.volume,false,true);
+		this.cellPan.setValue(event.pan,false,true);
+		this.cellAttack.setValue(event.attack,false,true);
+	}
+	,setupSliders: function() {
+		var id = "cell-offset-slider";
+		var slider = window.document.getElementById(id);
+		this.cellOffset = (function($this) {
+			var $r;
+			var min = Std.parseInt(slider.min);
+			var max = parseFloat(slider.max);
+			$r = new parameter_ParameterBase("cellOffsetSlider",parameter__$Parameter_Parameter_$Impl_$.getFloat(min,max));
+			return $r;
+		}(this));
+		this.setupParameterSlider(this.cellOffset,slider,false);
+		id = "cell-duration-slider";
+		slider = window.document.getElementById(id);
+		this.cellDuration = (function($this) {
+			var $r;
+			var min1 = Std.parseInt(slider.min);
+			var max1 = parseFloat(slider.max);
+			$r = new parameter_ParameterBase("cellDurationSlider",parameter__$Parameter_Parameter_$Impl_$.getFloat(min1,max1));
+			return $r;
+		}(this));
+		this.setupParameterSlider(this.cellDuration,slider,false);
+		id = "cell-rate-slider";
+		slider = window.document.getElementById(id);
+		this.cellRate = (function($this) {
+			var $r;
+			var min2 = Std.parseInt(slider.min);
+			var max2 = parseFloat(slider.max);
+			$r = new parameter_ParameterBase("cellRateSlider",parameter__$Parameter_Parameter_$Impl_$.getFloat(min2,max2));
+			return $r;
+		}(this));
+		this.setupParameterSlider(this.cellRate,slider,false);
+		id = "cell-volume-slider";
+		slider = window.document.getElementById(id);
+		this.cellVolume = (function($this) {
+			var $r;
+			var min3 = Std.parseInt(slider.min);
+			var max3 = parseFloat(slider.max);
+			$r = new parameter_ParameterBase("cellVolumeSlider",parameter__$Parameter_Parameter_$Impl_$.getFloatExponential(min3,max3));
+			return $r;
+		}(this));
+		this.setupParameterSlider(this.cellVolume,slider,false);
+		id = "cell-pan-slider";
+		slider = window.document.getElementById(id);
+		this.cellPan = (function($this) {
+			var $r;
+			var min4 = Std.parseInt(slider.min);
+			var max4 = parseFloat(slider.max);
+			$r = new parameter_ParameterBase("cellPanSlider",parameter__$Parameter_Parameter_$Impl_$.getFloat(min4,max4));
+			return $r;
+		}(this));
+		this.setupParameterSlider(this.cellPan,slider,false);
+		id = "cell-attack-slider";
+		slider = window.document.getElementById(id);
+		this.cellAttack = (function($this) {
+			var $r;
+			var min5 = Std.parseInt(slider.min);
+			var max5 = parseFloat(slider.max);
+			$r = new parameter_ParameterBase("cellAttackSlider",parameter__$Parameter_Parameter_$Impl_$.getFloatExponential(min5,max5));
+			return $r;
+		}(this));
+		this.setupParameterSlider(this.cellAttack,slider,false);
+		this.cellOffset.addObserver($bind(this,this.cellOffsetHandler));
+		this.cellDuration.addObserver($bind(this,this.cellDurationHandler));
+		this.cellRate.addObserver($bind(this,this.cellRateHandler));
+		this.cellVolume.addObserver($bind(this,this.cellVolumeHandler));
+		this.cellPan.addObserver($bind(this,this.cellPanHandler));
+		this.cellAttack.addObserver($bind(this,this.cellAttackHandler));
+	}
+	,setupParameterSlider: function(parameter,slider,normalised) {
+		parameter.addObserver(function(p) {
+			var val = p.getValue(normalised);
+			slider.MaterialSlider.change(val);
+			js.JQuery(slider).parent().siblings("div[for=\"" + slider.id + "\"]").text("" + val);
+		});
+		js.JQuery(slider).on("input change",function(_) {
+			parameter.setValue(slider.valueAsNumber,normalised);
+		});
+	}
+	,cellOffsetHandler: function(p) {
+		var track = this.drums.tracks[this.trackIndex];
+		track.events[this.tickIndex].offset = p.getValue() * track.source._buffer.duration * this.cellDuration.getValue();
+	}
+	,cellDurationHandler: function(p) {
+		var track = this.drums.tracks[this.trackIndex];
+		track.events[this.tickIndex].duration = p.getValue() * track.source._buffer.duration;
+	}
+	,cellRateHandler: function(p) {
+		this.drums.tracks[this.trackIndex].events[this.tickIndex].rate = p.getValue();
+	}
+	,cellVolumeHandler: function(p) {
+		this.drums.tracks[this.trackIndex].events[this.tickIndex].volume = p.getValue();
+	}
+	,cellPanHandler: function(p) {
+		this.drums.tracks[this.trackIndex].events[this.tickIndex].pan = p.getValue();
+	}
+	,cellAttackHandler: function(p) {
+		this.drums.tracks[this.trackIndex].events[this.tickIndex].attack = p.getValue();
+	}
+	,__class__: drums_ui_CellEditControls
+};
 var drums_ui_Controls = function() {
 	this.setupControlBar();
 	this.setupTracks();
@@ -875,7 +1018,7 @@ var drums_ui_Controls = function() {
 drums_ui_Controls.__name__ = true;
 drums_ui_Controls.prototype = {
 	onKeyDown: function(e) {
-		if(e.ctrlKey) return;
+		if(e.ctrlKey || e.shiftKey) return;
 		var _g = e.keyCode;
 		switch(_g) {
 		case 32:case 49:
@@ -946,7 +1089,7 @@ drums_ui_Controls.prototype = {
 			bpmSlider.MaterialSlider.change(val);
 			js.JQuery(bpmSlider).parent().siblings("div[for=\"bpm-slider\"]").text("" + val);
 		});
-		js.JQuery("#bpm-slider").on("change",function(_4) {
+		js.JQuery("#bpm-slider").on("input change",function(_4) {
 			_g.bpm.setValue(bpmSlider.valueAsNumber | 0);
 		});
 		this.bpm.setDefault(bpmSlider.valueAsNumber | 0);
@@ -961,9 +1104,9 @@ drums_ui_Controls.prototype = {
 		this.swing.addObserver(function(p4) {
 			var val1 = p4.getValue();
 			swingSlider.MaterialSlider.change(val1);
-			js.JQuery(swingSlider).parent().siblings("div[for=\"swing-slider\"]").text("" + val1 * 100 + "%");
+			js.JQuery(swingSlider).parent().siblings("div[for=\"swing-slider\"]").text("" + (val1 * 100 | 0) + "%");
 		});
-		js.JQuery("#swing-slider").on("change",function(_5) {
+		js.JQuery("#swing-slider").on("input change",function(_5) {
 			_g.swing.setValue(swingSlider.valueAsNumber);
 		});
 		this.swing.setDefault(swingSlider.valueAsNumber);
@@ -980,7 +1123,7 @@ drums_ui_Controls.prototype = {
 			volumeSlider.MaterialSlider.change(normValue);
 			js.JQuery(volumeSlider).parent().siblings("div[for=\"volume-slider\"]").text("" + normValue);
 		});
-		js.JQuery("#volume-slider").on("change",function(_6) {
+		js.JQuery("#volume-slider").on("input change",function(_6) {
 			_g.volume.setValue(volumeSlider.valueAsNumber,true);
 		});
 		this.volume.setDefault(volumeSlider.valueAsNumber,true);
@@ -1153,6 +1296,7 @@ var drums_ui_CellUI = function(pointer) {
 	this.editEvent = new hxsignal_impl_Signal2();
 	pointer.click.connect($bind(this,this.onClick));
 	pointer.down.connect($bind(this,this.onDown));
+	pointer.up.connect($bind(this,this.onPressCancel));
 	pointer.longPress.connect($bind(this,this.onLongPress));
 	pointer.pressCancel.connect($bind(this,this.onPressCancel));
 	pointer.pressProgress.connect($bind(this,this.onPressProgress));
@@ -1206,7 +1350,7 @@ drums_ui_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
 		this.editEvent.emit(trackIndex,tickIndex);
 	}
 	,onPressCancel: function(target) {
-		if(target.parent != this.parent) return;
+		if(target != null && target.parent != this.parent) return;
 		this.fading = true;
 		this.isDown = false;
 	}
@@ -1223,60 +1367,45 @@ drums_ui_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
 	}
 	,__class__: drums_ui_CellUI
 });
+var drums_ui_UIElement = function(width,height) {
+	PIXI.Container.call(this);
+	this.interactive = false;
+	this.bg = new PIXI.Graphics();
+	this.drawBg(width,height);
+	this.addChild(this.bg);
+};
+drums_ui_UIElement.__name__ = true;
+drums_ui_UIElement.__super__ = PIXI.Container;
+drums_ui_UIElement.prototype = $extend(PIXI.Container.prototype,{
+	drawBg: function(w,h) {
+		this.bg.clear();
+		this.bg.beginFill(817360);
+		this.bg.drawRect(0,0,w,h);
+		this.bg.endFill();
+	}
+	,__class__: drums_ui_UIElement
+});
 var drums_ui_celledit_CellInfoPanel = function() {
-	drums_ui_UIElement.call(this,210,84);
-	this.cellIndex = new PIXI.Text("01",{ font : "400 20px Roboto", fill : "#00ffbe", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
-	this.cellIndex.position.set(15,10);
-	this.trackName = new PIXI.Text("Cowbell",{ font : "400 26px Roboto", fill : "white", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
-	this.duration = new PIXI.Text("00.000 s",{ font : "400 16px Roboto", fill : "white", align : "center", dropShadow : true, dropShadowAngle : 0, dropShadowDistance : 1, dropShadowColor : "#008ECC"});
-	this.addChild(this.cellIndex);
+	drums_ui_UIElement.call(this,170,43);
+	this.bg.alpha = .66;
+	this.trackName = new PIXI.Text("",{ font : "200 20px Roboto", fill : "white", align : "center"});
+	this.trackName.position.set(15,10);
 	this.addChild(this.trackName);
-	this.addChild(this.duration);
 };
 drums_ui_celledit_CellInfoPanel.__name__ = true;
-drums_ui_celledit_CellInfoPanel.floatToStringPrecision = function(n,prec) {
-	n = Math.round(n * Math.pow(10,prec));
-	var str = "" + n;
-	var len = str.length;
-	if(len <= prec) {
-		while(len < prec) {
-			str = "0" + str;
-			len++;
-		}
-		return "0." + str;
-	}
-	return HxOverrides.substr(str,0,str.length - prec) + "." + HxOverrides.substr(str,str.length - prec,null);
-};
 drums_ui_celledit_CellInfoPanel.__super__ = drums_ui_UIElement;
 drums_ui_celledit_CellInfoPanel.prototype = $extend(drums_ui_UIElement.prototype,{
 	update: function(sequencer,i,j) {
 		var jj = j + 1;
 		var track = sequencer.tracks[i];
-		this.cellIndex.text = jj < 10?"0" + jj + "/16":"" + jj + "/16";
-		this.duration.text = "" + drums_ui_celledit_CellInfoPanel.floatToStringPrecision(track.source.duration,4);
-		this.duration.position.set(195 - this.duration.width,50);
-		this.trackName.text = track.name;
-		this.trackName.position.set(15,40);
+		this.trackName.text = track.name + " (" + (jj < 10?"0" + jj + "/16)":"" + jj + "/16)");
+		this.drawBg((this.trackName.width | 0) + 30,43);
 	}
 	,__class__: drums_ui_celledit_CellInfoPanel
 });
-var drums_ui_celledit_OscilliscopePanel = function(drums1,trackIndex,tickIndex) {
-	drums_ui_UIElement.call(this,315,100);
-};
-drums_ui_celledit_OscilliscopePanel.__name__ = true;
-drums_ui_celledit_OscilliscopePanel.__super__ = drums_ui_UIElement;
-drums_ui_celledit_OscilliscopePanel.prototype = $extend(drums_ui_UIElement.prototype,{
-	drawBg: function(w,h) {
-		drums_ui_UIElement.prototype.drawBg.call(this,w,h);
-		this.bg.lineStyle(1,6344447);
-		this.bg.moveTo(0,h / 2);
-		this.bg.lineTo(314,h / 2);
-	}
-	,__class__: drums_ui_celledit_OscilliscopePanel
-});
 var drums_ui_celledit_WaveformPanel = function() {
-	drums_ui_UIElement.call(this,510,198);
-	this.waveform = new drums_Waveform(510,198);
+	drums_ui_UIElement.call(this,840,198);
+	this.waveform = new drums_Waveform(840,198);
 	this.addChildAt(this.waveform,1);
 };
 drums_ui_celledit_WaveformPanel.__name__ = true;
@@ -1286,13 +1415,13 @@ drums_ui_celledit_WaveformPanel.prototype = $extend(drums_ui_UIElement.prototype
 		var buffer = drums1.tracks[trackIndex].source._buffer;
 		this.waveform.drawBuffer(buffer);
 	}
-	,play: function(duration) {
+	,play: function(event) {
 	}
 	,drawBg: function(w,h) {
 		drums_ui_UIElement.prototype.drawBg.call(this,w,h);
 		this.bg.lineStyle(1,6344447);
 		this.bg.moveTo(0,h / 2);
-		this.bg.lineTo(509,h / 2);
+		this.bg.lineTo(840,h / 2);
 	}
 	,__class__: drums_ui_celledit_WaveformPanel
 });
@@ -2038,7 +2167,7 @@ tones_AudioBase.prototype = {
 		return this._release = value;
 	}
 	,set_volume: function(value) {
-		if(value < 0) value = 0; else if(value > 1) value = 1;
+		if(value < 0) value = 0;
 		return this._volume = value;
 	}
 	,triggerItemBegin: function(id,time) {

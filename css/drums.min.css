@@ -1,14 +1,21 @@
-body{color:#aaa;background-color:#191B1C;}
-#pixi-container{width:898px;height:445px;margin:0 auto;position:relative;transform:translateZ(0);}
+body{color:#fff;background-color:#191B1C;}
+#pixi-container{width:898px;height:445px;margin:0 auto;position:relative;}
 button.iconbutton{height:48px;min-width:48px;}
 button.iconbutton i{font-size:48px;position:relative;top:0px;}
 .spin-container{width:28px;height:28px;margin:208px auto;padding-left:14px;}
 .page-content{max-width:1280px;min-width:950px;margin:32px auto;}
-.bpm-slider .mdl-slider__container{top:11px;}
-.bpm-slider p{line-height:40px;margin:0;}
+.label-sldier .mdl-slider__container{top:11px;}
+.label-sldier p{line-height:40px;margin:0;}
 .controls-grid{background-color:rgb(32,34,36);}
 .controls-grid>.mdl-cell{white-space:nowrap;}
 .controls div.tracks-panel{position:relative;background-color:#16181A;min-width:120px;}
 .controls p.track-label{padding-left:14px;padding-top:14px;padding-bottom:14px;margin-bottom:4px;}
 .controls div.tracks-panel span{position:absolute;color:rgb(58,59,61);top:10px;right:16px;}
 .sequencer-grid{background-color:rgb(18,19,20);}
+#cell-edit-controls{display:none;position:relative;z-index:1;}
+#cell-edit-controls .container #cell-edit-close-button{position:absolute;right:-8px;top:-8px;}
+#cell-edit-controls .container .cell-play-button{position:absolute;top:182px;left:825px;}
+#cell-edit-controls .container .cell-play-button>button{color:inherit;}
+#cell-edit-controls .container .cell-next-prev{position:absolute;top:36px;left:789px;}
+#cell-edit-controls .container .cell-edit-sliders{position:absolute;width:826px;background-color:rgb(12,120,208);top:256px;left:26px;padding:12px 8px;}
+#cell-edit-controls .container .cell-edit-sliders label>p{float:left;}
