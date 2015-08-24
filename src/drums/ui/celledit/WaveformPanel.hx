@@ -2,6 +2,7 @@ package drums.ui.celledit;
 import drums.DrumSequencer;
 import drums.Waveform;
 import js.html.audio.AudioBuffer;
+import pixi.core.graphics.Graphics;
 
 /**
  * ...
@@ -10,33 +11,59 @@ import js.html.audio.AudioBuffer;
 class WaveformPanel extends UIElement {
 
 	var waveform:Waveform;
+	var overlay:Graphics;
+	
+	static inline var Width = 840;
+	static inline var Height = 198;
 
 	public function new() {
-		super(840, 198);
+		super(Width, 198);
 
-		waveform = new Waveform(840, 198);
+		waveform = new Waveform(Width, Height);
 		
-		addChildAt(waveform, 1);
+		overlay = new Graphics();
+		addChildAt(overlay, 1);
+		
+		addChildAt(waveform, 2);
+		
+		updateOverlay(0, 1);
 	}
-
+	
 
 	public function setup(drums:DrumSequencer, trackIndex:Int, tickIndex:Int) {
 		var buffer = drums.tracks[trackIndex].source.buffer;
+		var e = drums.tracks[trackIndex].events[tickIndex];
+		
+		// var d = buffer.duration;
+		
 		waveform.drawBuffer(buffer);
-	}
-
-	public function updateOverlay(offset:Float, duration:Float, rate:Float) {
-
+		updateOverlay(e.offset, e.duration);
 	}
 	
-	public function play(event:TrackEvent) {
-		
-	}
 
+	public function updateOverlay(offset:Float, duration:Float) {
+		
+		var x = Width * offset;
+		var w = Width * duration;
+		
+		if (x + w > Width) w = x - Width;
+		
+		overlay.clear();
+		overlay.beginFill(0,.1);
+		overlay.drawRect(x, 0, w, Height);
+		overlay.endFill();
+	}
+	
+	
+	public function play(e:TrackEvent) {
+		updateOverlay(e.offset, e.duration);
+	}
+	
+	
 	override function drawBg(w, h) {
 		super.drawBg(w, h);
 		bg.lineStyle(1, 0x60CEFF);
 		bg.moveTo(0, h/2);
-		bg.lineTo(840,h/2);
+		bg.lineTo(Width,h/2);
 	}
 }

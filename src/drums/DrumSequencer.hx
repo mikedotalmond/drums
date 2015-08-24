@@ -320,7 +320,7 @@ typedef TrackEvent = {
 	var pan:Float;
 	var rate:Float;
 	var attack:Float;
-	//var release:Float;
+	
 	var offset:Float;
 	var duration:Float;
 }

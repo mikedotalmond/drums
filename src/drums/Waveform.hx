@@ -17,9 +17,8 @@ class Waveform extends Graphics {
 
 	public function new(width:Int, height:Int) {
 		super();
-		displayWidth = width - 16;
+		displayWidth = width;
 		displayHeight = height;
-		x = 8;
 	}
 
 	public function drawBuffer(buffer:AudioBuffer, normalise:Bool = true) {
