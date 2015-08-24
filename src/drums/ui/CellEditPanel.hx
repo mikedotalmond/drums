@@ -5,9 +5,11 @@ import drums.ui.celledit.CellInfoPanel;
 import drums.ui.celledit.WaveformPanel;
 import drums.ui.UIElement;
 import hxsignal.Signal;
+import input.KeyCodes;
 import js.Browser;
 import js.html.Element;
 import js.html.InputElement;
+import js.html.KeyboardEvent;
 import js.JQuery;
 import parameter.Mapping.InterpolationExponential;
 import parameter.Mapping.InterpolationLinear;
@@ -72,15 +74,27 @@ class CellEditPanel extends Container {
 	
 	public function edit(trackIndex:Int, tickIndex:Int) {
 		
+		if (tickIndex > 15) tickIndex = 0;
+		else if (tickIndex < 0) tickIndex = 15;
+		
+		if (trackIndex > 7) trackIndex = 0;
+		else if (trackIndex < 0) trackIndex = 7;
+		
 		var sameTrack = this.trackIndex == trackIndex;
 		
 		this.trackIndex = trackIndex;
 		this.tickIndex = tickIndex;
 		
-		if (!sameTrack) {
+		if (!visible) {
 			visible = launching = true;
 			fadeUI = closing = false;
 			bgSize = 0;
+			uiContainer.alpha = 0;
+		} else if(!sameTrack) {
+			visible = true;
+			launching = closing = false;
+			fadeUI = true;
+			bgSize = 1;
 			uiContainer.alpha = 0;
 		}
 		
@@ -91,11 +105,31 @@ class CellEditPanel extends Container {
 		cellInfo.update(drums, trackIndex, tickIndex);
 		
 		controls.update(trackIndex, tickIndex);
+		
+		Browser.window.removeEventListener('keydown', onKeyDown);
+		Browser.window.addEventListener('keydown', onKeyDown);
 	}
-
-
+	
+	
+	function onKeyDown(e:KeyboardEvent):Void {
+		switch(e.keyCode) {
+			case KeyCodes.P:
+				playNow();
+			case KeyCodes.LEFT:
+				edit(trackIndex, tickIndex - 1);
+			case KeyCodes.RIGHT:
+				edit(trackIndex, tickIndex + 1);
+			case KeyCodes.UP:
+				edit(trackIndex - 1, tickIndex);
+			case KeyCodes.DOWN:
+				edit(trackIndex + 1, tickIndex);
+		}
+	}
+	
 	public function close() {
 
+		Browser.window.removeEventListener('keydown', onKeyDown);
+		
 		bg.pivot.set(0,0);
 		bg.position.set(0,0);
 		bg.scale.set(1,1);
@@ -111,7 +145,7 @@ class CellEditPanel extends Container {
 
 	public function tick(index:Int) {
 		if (index == tickIndex && event.active) {
-			waveform.play(event.duration);
+			waveform.play(event);
 		}
 	}
 
@@ -121,7 +155,7 @@ class CellEditPanel extends Container {
 
 		if (launching || closing) {
 
-			bgSize += (launching ? .07 : - .07);
+			bgSize += (launching ? .08 : - .07);
 
 			if (bgSize >= 1) onLaunched();
 			else if (bgSize <= 0) onClosed();

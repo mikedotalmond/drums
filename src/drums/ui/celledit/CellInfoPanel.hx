@@ -15,9 +15,7 @@ class CellInfoPanel extends UIElement {
 		super(170, 43);
 		bg.alpha = .66;
 
-		trackName = new Text('', { font : '200 20px Roboto', fill : 'white', align : 'center',
-			dropShadow:false, dropShadowAngle:0, dropShadowDistance:1, dropShadowColor:'#0C78D0'
-		});
+		trackName = new Text('', { font : '200 20px Roboto', fill : 'white', align : 'center'});
 
 		trackName.position.set(15, 10);
 		addChild(trackName);

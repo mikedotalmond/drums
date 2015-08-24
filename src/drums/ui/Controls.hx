@@ -50,7 +50,7 @@ class Controls {
 	}
 	
 	function onKeyDown(e:KeyboardEvent) {
-		if (e.ctrlKey) return;
+		if (e.ctrlKey || e.shiftKey) return;
 		
 		switch(e.keyCode) {
 			case KeyCodes.SPACE, KeyCodes.NUMBER_1: 

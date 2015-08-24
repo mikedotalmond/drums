@@ -1,7 +1,6 @@
 package drums.ui;
 import drums.DrumSequencer;
 import drums.Pointer;
-import drums.ui.CellEditPanel;
 import hxsignal.Signal;
 import js.html.Point;
 import pixi.core.display.Container;

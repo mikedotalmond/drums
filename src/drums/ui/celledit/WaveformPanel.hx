@@ -15,10 +15,7 @@ class WaveformPanel extends UIElement {
 		super(840, 198);
 
 		waveform = new Waveform(840, 198);
-
-		//seq.tick.connect();
-		//seq.isPlaying(0);
-
+		
 		addChildAt(waveform, 1);
 	}
 
@@ -28,8 +25,12 @@ class WaveformPanel extends UIElement {
 		waveform.drawBuffer(buffer);
 	}
 
-	public function play(duration:Float) {
+	public function updateOverlay(offset:Float, duration:Float, rate:Float) {
 
+	}
+	
+	public function play(event:TrackEvent) {
+		
 	}
 
 	override function drawBg(w, h) {
