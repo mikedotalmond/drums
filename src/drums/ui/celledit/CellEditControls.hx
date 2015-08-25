@@ -154,7 +154,7 @@ class CellEditControls {
 	
 	function cellOffsetHandler(p:Parameter<Float, InterpolationLinear>) {
 		var track = drums.tracks[trackIndex];
-		track.events[tickIndex].offset = p.getValue() * track.source.buffer.duration * cellDuration.getValue();
+		track.events[tickIndex].offset = p.getValue() * track.source.buffer.duration;
 	}
 	
 	function cellDurationHandler(p:Parameter<Float, InterpolationLinear>) {
