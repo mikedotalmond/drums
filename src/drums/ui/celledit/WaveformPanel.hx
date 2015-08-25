@@ -37,16 +37,17 @@ class WaveformPanel extends UIElement {
 		// var d = buffer.duration;
 		
 		waveform.drawBuffer(buffer);
-		updateOverlay(e.offset, e.duration);
 	}
 	
 
 	public function updateOverlay(offset:Float, duration:Float) {
 		
-		var x = Width * offset;
-		var w = Width * duration;
+		duration = duration - offset;
 		
-		if (x + w > Width) w = x - Width;
+		var x = Width * offset;
+		var w = x + Width * duration;
+		
+		w = Math.min(Width - x, w);
 		
 		overlay.clear();
 		overlay.beginFill(0,.1);
@@ -56,7 +57,7 @@ class WaveformPanel extends UIElement {
 	
 	
 	public function play(e:TrackEvent) {
-		updateOverlay(e.offset, e.duration);
+		
 	}
 	
 	

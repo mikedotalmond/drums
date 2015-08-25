@@ -61,6 +61,11 @@ class CellEditPanel extends Container {
 		controls.editNextPrev.connect(function(i) {
 			edit(controls.trackIndex, i);
 		});
+		
+		var f = function(val) waveform.updateOverlay(controls.cellOffset.getValue(true), controls.cellDuration.getValue(true));
+		
+		controls.cellOffset.addObserver(f);
+		controls.cellDuration.addObserver(f);
 	}
 
 	
@@ -93,7 +98,8 @@ class CellEditPanel extends Container {
 		event = drums.tracks[trackIndex].events[tickIndex];
 
 		waveform.setup(drums, trackIndex, tickIndex);
-
+		waveform.updateOverlay(controls.cellOffset.getValue(true), controls.cellDuration.getValue(true));
+		
 		cellInfo.update(drums, trackIndex, tickIndex);
 		
 		controls.update(trackIndex, tickIndex);
