@@ -124,14 +124,14 @@ class DrumSequencer {
 		if (!playing) return;
 
 		if (time < context.currentTime) time = context.currentTime;
-
+		
 		// apply swing
 		var offset = .0;
 		if (swing > 0) {
 			if (tickIndex & 1 == 1) {
-				offset = (0.25 + swing) * tickLength;
+				offset = swing * tickLength;
 			} else {
-				offset = (0.25 - swing) * tickLength;
+				offset = -swing * tickLength;
 			}
 		}
 
@@ -185,7 +185,6 @@ class DrumSequencer {
 				var s = track.source;
 				s.volume = event.volume;
 				s.attack = event.attack;
-				//s.release = event.release;
 				s.offset = event.offset;
 				s.duration = event.duration;
 				s.playbackRate = event.rate;
