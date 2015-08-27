@@ -87,10 +87,7 @@ class CellEditControls {
 		var duration = track.source.buffer.duration;
 		
 		cellDuration.setValue(event.duration / duration, false, true); 
-		cellOffset.setValue(event.offset / event.duration, false, true);		
-		
-		//trace(cellDuration.getValue());
-		//trace(cellOffset.getValue());
+		cellOffset.setValue(event.offset / duration, false, true);
 		
 		cellRate.setValue(event.rate, false, true); //
 		cellVolume.setValue(event.volume, false, true);	//
