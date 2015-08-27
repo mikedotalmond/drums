@@ -265,19 +265,23 @@ class Track {
 
 		var buffer = source.buffer;
 
-		for (i in 0...stepCount) {
-			var rate = 1.1 - ((1 + Math.random()*i) / stepCount);
-			if (Math.random() < .5) rate = 2 - rate;
-			if (rate <= 0) rate = 1;
-			
+		for (i in 0...stepCount) {			
 			var e = events[i];
-			e.active = Std.int(16 * Math.random()) % Std.int(Math.random() * 16) == 0;
-			e.volume = .5 + Math.random() * 2;
-			e.pan = Math.random() * ( -.5 + (i / (stepCount * 2)));
-			e.rate = rate;
-			e.duration = source.buffer.duration * Math.random();
-			e.offset = e.duration * Math.random() * .01;
-			e.attack = .01 * Math.random();
+			var active = Std.int(16 * Math.random()) % Std.int(Math.random() * 16) == 0;
+			if (active) {
+				e.active = true;
+				var rate = 1.1 - ((1 + Math.random()*i) / stepCount);
+				if (Math.random() < .5) rate = 2 - rate;
+				if (rate <= 0) rate = 1;
+				e.rate = rate;
+				e.volume = .5 + Math.random() * 2;
+				e.pan = Math.random() * ( -.5 + (i / (stepCount * 2)));
+				e.duration = source.buffer.duration * .1 + Math.random() * .9;
+				e.offset = Math.random() > .5 ? 0 : e.duration * Math.random() * .1;
+				e.attack = Math.random() > .5 ? 0 : .1 * Math.random();
+			} else {
+				e.active = false;	
+			}
 		}
 	}
 	
