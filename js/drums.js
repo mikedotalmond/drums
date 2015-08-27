@@ -399,7 +399,7 @@ drums_DrumSequencer.prototype = {
 		if(time < this.context.currentTime) time = this.context.currentTime;
 		var offset = .0;
 		if(this._swing > 0) {
-			if((this.tickIndex & 1) == 1) offset = (0.25 + this._swing) * 0.25; else offset = (0.25 - this._swing) * 0.25;
+			if((this.tickIndex & 1) == 1) offset = this._swing * 0.25; else offset = -this._swing * 0.25;
 		}
 		var nextTick = time + (0.25 + offset) / (this._bpm / 60);
 		this.timeTrack.addTimedEvent(nextTick);
@@ -482,9 +482,6 @@ drums_Track.prototype = {
 		var _g = 0;
 		while(_g < 16) {
 			var i = _g++;
-			var rate = 1.1 - (1 + Math.random() * i) / 16;
-			if(Math.random() < .5) rate = 2 - rate;
-			if(rate <= 0) rate = 1;
 			var e = this.events[i];
 			var tmp;
 			var x = 16 * Math.random();
@@ -492,13 +489,19 @@ drums_Track.prototype = {
 			var tmp1;
 			var x1 = Math.random() * 16;
 			tmp1 = x1 | 0;
-			e.active = tmp % tmp1 == 0;
-			e.volume = .5 + Math.random() * 2;
-			e.pan = Math.random() * (-0.5 + i / 32);
-			e.rate = rate;
-			e.duration = this.source._buffer.duration * Math.random();
-			e.offset = e.duration * Math.random() * .01;
-			e.attack = .01 * Math.random();
+			var active = tmp % tmp1 == 0;
+			if(active) {
+				e.active = true;
+				var rate = 1.1 - (1 + Math.random() * i) / 16;
+				if(Math.random() < .5) rate = 2 - rate;
+				if(rate <= 0) rate = 1;
+				e.rate = rate;
+				e.volume = .5 + Math.random() * 2;
+				e.pan = Math.random() * (-0.5 + i / 32);
+				e.duration = this.source._buffer.duration * .1 + Math.random() * .9;
+				e.offset = Math.random() > .5?0:e.duration * Math.random() * .1;
+				e.attack = Math.random() > .5?0:.1 * Math.random();
+			} else e.active = false;
 		}
 	}
 	,mute: function(state) {
@@ -578,9 +581,8 @@ drums_Pointer.prototype = {
 };
 var drums_Waveform = function(width,height) {
 	PIXI.Graphics.call(this);
-	this.displayWidth = width - 16;
+	this.displayWidth = width;
 	this.displayHeight = height;
-	this.x = 8;
 };
 drums_Waveform.__name__ = true;
 drums_Waveform.__super__ = PIXI.Graphics;
@@ -716,12 +718,17 @@ var drums_ui_CellEditPanel = function(drums1,pointer,displayWidth,displayHeight)
 	this.bg.interactive = true;
 	this.addChild(this.bg);
 	this.setupUI(pointer);
-	this.controls = new drums_ui_CellEditControls(drums1);
+	this.controls = new drums_ui_celledit_CellEditControls(drums1);
 	this.controls.close.connect($bind(this,this.close));
 	this.controls.play.connect($bind(this,this.playNow));
 	this.controls.editNextPrev.connect(function(i) {
 		_g.edit(_g.controls.trackIndex,i);
 	});
+	var f = function(val) {
+		_g.waveform.updateOverlay(_g.controls.cellOffset.getValue(true),_g.controls.cellDuration.getValue(true));
+	};
+	this.controls.cellOffset.addObserver(f);
+	this.controls.cellDuration.addObserver(f);
 };
 drums_ui_CellEditPanel.__name__ = true;
 drums_ui_CellEditPanel.__super__ = PIXI.Container;
@@ -746,6 +753,7 @@ drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
 		}
 		this.event = this.drums.tracks[trackIndex].events[tickIndex];
 		this.waveform.setup(this.drums,trackIndex,tickIndex);
+		this.waveform.updateOverlay(this.controls.cellOffset.getValue(true),this.controls.cellDuration.getValue(true));
 		this.cellInfo.update(this.drums,trackIndex,tickIndex);
 		this.controls.update(trackIndex,tickIndex);
 		window.removeEventListener("keydown",$bind(this,this.onKeyDown));
@@ -858,156 +866,6 @@ drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
 	}
 	,__class__: drums_ui_CellEditPanel
 });
-var drums_ui_CellEditControls = function(drums1) {
-	var _g = this;
-	this.trackIndex = -1;
-	this.tickIndex = -1;
-	this.drums = drums1;
-	this.container = window.document.getElementById("cell-edit-controls");
-	this.close = new hxsignal_impl_Signal0();
-	this.play = new hxsignal_impl_Signal0();
-	this.editNextPrev = new hxsignal_impl_Signal1();
-	js.JQuery("#cell-edit-play-button").on("click tap",function(_) {
-		_g.play.emit();
-	});
-	js.JQuery("#cell-edit-close-button").on("click tap",function(_1) {
-		_g.close.emit();
-		_g.tickIndex = -1;
-		_g.trackIndex = -1;
-		_g.container.style.display = "none";
-	});
-	js.JQuery("#cell-edit-next-button").on("click tap",function(_2) {
-		_g.tickIndex++;
-		if(_g.tickIndex >= drums1.tracks[_g.trackIndex].events.length) _g.tickIndex = 0;
-		_g.editNextPrev.emit(_g.tickIndex);
-	});
-	js.JQuery("#cell-edit-prev-button").on("click tap",function(_3) {
-		_g.tickIndex--;
-		if(_g.tickIndex < 0) _g.tickIndex += drums1.tracks[_g.trackIndex].events.length;
-		_g.editNextPrev.emit(_g.tickIndex);
-	});
-	this.setupSliders();
-};
-drums_ui_CellEditControls.__name__ = true;
-drums_ui_CellEditControls.prototype = {
-	update: function(trackIndex,tickIndex) {
-		var sameTrack = this.trackIndex == trackIndex;
-		this.trackIndex = trackIndex;
-		this.tickIndex = tickIndex;
-		if(!sameTrack) {
-			this.container.style.opacity = "0";
-			this.container.style.display = "block";
-		}
-		var track = this.drums.tracks[trackIndex];
-		var event = track.events[tickIndex];
-		var duration = track.source._buffer.duration;
-		this.cellDuration.setValue(event.duration / duration,false,true);
-		this.cellOffset.setValue(event.offset / event.duration,false,true);
-		this.cellRate.setValue(event.rate,false,true);
-		this.cellVolume.setValue(event.volume,false,true);
-		this.cellPan.setValue(event.pan,false,true);
-		this.cellAttack.setValue(event.attack,false,true);
-	}
-	,setupSliders: function() {
-		var id = "cell-offset-slider";
-		var slider = window.document.getElementById(id);
-		this.cellOffset = (function($this) {
-			var $r;
-			var min = Std.parseInt(slider.min);
-			var max = parseFloat(slider.max);
-			$r = new parameter_ParameterBase("cellOffsetSlider",parameter__$Parameter_Parameter_$Impl_$.getFloat(min,max));
-			return $r;
-		}(this));
-		this.setupParameterSlider(this.cellOffset,slider,false);
-		id = "cell-duration-slider";
-		slider = window.document.getElementById(id);
-		this.cellDuration = (function($this) {
-			var $r;
-			var min1 = Std.parseInt(slider.min);
-			var max1 = parseFloat(slider.max);
-			$r = new parameter_ParameterBase("cellDurationSlider",parameter__$Parameter_Parameter_$Impl_$.getFloat(min1,max1));
-			return $r;
-		}(this));
-		this.setupParameterSlider(this.cellDuration,slider,false);
-		id = "cell-rate-slider";
-		slider = window.document.getElementById(id);
-		this.cellRate = (function($this) {
-			var $r;
-			var min2 = Std.parseInt(slider.min);
-			var max2 = parseFloat(slider.max);
-			$r = new parameter_ParameterBase("cellRateSlider",parameter__$Parameter_Parameter_$Impl_$.getFloat(min2,max2));
-			return $r;
-		}(this));
-		this.setupParameterSlider(this.cellRate,slider,false);
-		id = "cell-volume-slider";
-		slider = window.document.getElementById(id);
-		this.cellVolume = (function($this) {
-			var $r;
-			var min3 = Std.parseInt(slider.min);
-			var max3 = parseFloat(slider.max);
-			$r = new parameter_ParameterBase("cellVolumeSlider",parameter__$Parameter_Parameter_$Impl_$.getFloatExponential(min3,max3));
-			return $r;
-		}(this));
-		this.setupParameterSlider(this.cellVolume,slider,false);
-		id = "cell-pan-slider";
-		slider = window.document.getElementById(id);
-		this.cellPan = (function($this) {
-			var $r;
-			var min4 = Std.parseInt(slider.min);
-			var max4 = parseFloat(slider.max);
-			$r = new parameter_ParameterBase("cellPanSlider",parameter__$Parameter_Parameter_$Impl_$.getFloat(min4,max4));
-			return $r;
-		}(this));
-		this.setupParameterSlider(this.cellPan,slider,false);
-		id = "cell-attack-slider";
-		slider = window.document.getElementById(id);
-		this.cellAttack = (function($this) {
-			var $r;
-			var min5 = Std.parseInt(slider.min);
-			var max5 = parseFloat(slider.max);
-			$r = new parameter_ParameterBase("cellAttackSlider",parameter__$Parameter_Parameter_$Impl_$.getFloatExponential(min5,max5));
-			return $r;
-		}(this));
-		this.setupParameterSlider(this.cellAttack,slider,false);
-		this.cellOffset.addObserver($bind(this,this.cellOffsetHandler));
-		this.cellDuration.addObserver($bind(this,this.cellDurationHandler));
-		this.cellRate.addObserver($bind(this,this.cellRateHandler));
-		this.cellVolume.addObserver($bind(this,this.cellVolumeHandler));
-		this.cellPan.addObserver($bind(this,this.cellPanHandler));
-		this.cellAttack.addObserver($bind(this,this.cellAttackHandler));
-	}
-	,setupParameterSlider: function(parameter,slider,normalised) {
-		parameter.addObserver(function(p) {
-			var val = p.getValue(normalised);
-			slider.MaterialSlider.change(val);
-			js.JQuery(slider).parent().siblings("div[for=\"" + slider.id + "\"]").text("" + val);
-		});
-		js.JQuery(slider).on("input change",function(_) {
-			parameter.setValue(slider.valueAsNumber,normalised);
-		});
-	}
-	,cellOffsetHandler: function(p) {
-		var track = this.drums.tracks[this.trackIndex];
-		track.events[this.tickIndex].offset = p.getValue() * track.source._buffer.duration * this.cellDuration.getValue();
-	}
-	,cellDurationHandler: function(p) {
-		var track = this.drums.tracks[this.trackIndex];
-		track.events[this.tickIndex].duration = p.getValue() * track.source._buffer.duration;
-	}
-	,cellRateHandler: function(p) {
-		this.drums.tracks[this.trackIndex].events[this.tickIndex].rate = p.getValue();
-	}
-	,cellVolumeHandler: function(p) {
-		this.drums.tracks[this.trackIndex].events[this.tickIndex].volume = p.getValue();
-	}
-	,cellPanHandler: function(p) {
-		this.drums.tracks[this.trackIndex].events[this.tickIndex].pan = p.getValue();
-	}
-	,cellAttackHandler: function(p) {
-		this.drums.tracks[this.trackIndex].events[this.tickIndex].attack = p.getValue();
-	}
-	,__class__: drums_ui_CellEditControls
-};
 var drums_ui_Controls = function() {
 	this.setupControlBar();
 	this.setupTracks();
@@ -1385,6 +1243,156 @@ drums_ui_UIElement.prototype = $extend(PIXI.Container.prototype,{
 	}
 	,__class__: drums_ui_UIElement
 });
+var drums_ui_celledit_CellEditControls = function(drums1) {
+	var _g = this;
+	this.trackIndex = -1;
+	this.tickIndex = -1;
+	this.drums = drums1;
+	this.container = window.document.getElementById("cell-edit-controls");
+	this.close = new hxsignal_impl_Signal0();
+	this.play = new hxsignal_impl_Signal0();
+	this.editNextPrev = new hxsignal_impl_Signal1();
+	js.JQuery("#cell-edit-play-button").on("click tap",function(_) {
+		_g.play.emit();
+	});
+	js.JQuery("#cell-edit-close-button").on("click tap",function(_1) {
+		_g.close.emit();
+		_g.tickIndex = -1;
+		_g.trackIndex = -1;
+		_g.container.style.display = "none";
+	});
+	js.JQuery("#cell-edit-next-button").on("click tap",function(_2) {
+		_g.tickIndex++;
+		if(_g.tickIndex >= drums1.tracks[_g.trackIndex].events.length) _g.tickIndex = 0;
+		_g.editNextPrev.emit(_g.tickIndex);
+	});
+	js.JQuery("#cell-edit-prev-button").on("click tap",function(_3) {
+		_g.tickIndex--;
+		if(_g.tickIndex < 0) _g.tickIndex += drums1.tracks[_g.trackIndex].events.length;
+		_g.editNextPrev.emit(_g.tickIndex);
+	});
+	this.setupSliders();
+};
+drums_ui_celledit_CellEditControls.__name__ = true;
+drums_ui_celledit_CellEditControls.prototype = {
+	update: function(trackIndex,tickIndex) {
+		var sameTrack = this.trackIndex == trackIndex;
+		this.trackIndex = trackIndex;
+		this.tickIndex = tickIndex;
+		if(!sameTrack) {
+			this.container.style.opacity = "0";
+			this.container.style.display = "block";
+		}
+		var track = this.drums.tracks[trackIndex];
+		var event = track.events[tickIndex];
+		var duration = track.source._buffer.duration;
+		this.cellDuration.setValue(event.duration / duration,false,true);
+		this.cellOffset.setValue(event.offset / duration,false,true);
+		this.cellRate.setValue(event.rate,false,true);
+		this.cellVolume.setValue(event.volume,false,true);
+		this.cellPan.setValue(event.pan,false,true);
+		this.cellAttack.setValue(event.attack,false,true);
+	}
+	,setupSliders: function() {
+		var id = "cell-offset-slider";
+		var slider = window.document.getElementById(id);
+		this.cellOffset = (function($this) {
+			var $r;
+			var min = Std.parseInt(slider.min);
+			var max = parseFloat(slider.max);
+			$r = new parameter_ParameterBase("cellOffsetSlider",parameter__$Parameter_Parameter_$Impl_$.getFloat(min,max));
+			return $r;
+		}(this));
+		this.setupParameterSlider(this.cellOffset,slider,false);
+		id = "cell-duration-slider";
+		slider = window.document.getElementById(id);
+		this.cellDuration = (function($this) {
+			var $r;
+			var min1 = Std.parseInt(slider.min);
+			var max1 = parseFloat(slider.max);
+			$r = new parameter_ParameterBase("cellDurationSlider",parameter__$Parameter_Parameter_$Impl_$.getFloat(min1,max1));
+			return $r;
+		}(this));
+		this.setupParameterSlider(this.cellDuration,slider,false);
+		id = "cell-rate-slider";
+		slider = window.document.getElementById(id);
+		this.cellRate = (function($this) {
+			var $r;
+			var min2 = Std.parseInt(slider.min);
+			var max2 = parseFloat(slider.max);
+			$r = new parameter_ParameterBase("cellRateSlider",parameter__$Parameter_Parameter_$Impl_$.getFloat(min2,max2));
+			return $r;
+		}(this));
+		this.setupParameterSlider(this.cellRate,slider,false);
+		id = "cell-volume-slider";
+		slider = window.document.getElementById(id);
+		this.cellVolume = (function($this) {
+			var $r;
+			var min3 = Std.parseInt(slider.min);
+			var max3 = parseFloat(slider.max);
+			$r = new parameter_ParameterBase("cellVolumeSlider",parameter__$Parameter_Parameter_$Impl_$.getFloatExponential(min3,max3));
+			return $r;
+		}(this));
+		this.setupParameterSlider(this.cellVolume,slider,false);
+		id = "cell-pan-slider";
+		slider = window.document.getElementById(id);
+		this.cellPan = (function($this) {
+			var $r;
+			var min4 = Std.parseInt(slider.min);
+			var max4 = parseFloat(slider.max);
+			$r = new parameter_ParameterBase("cellPanSlider",parameter__$Parameter_Parameter_$Impl_$.getFloat(min4,max4));
+			return $r;
+		}(this));
+		this.setupParameterSlider(this.cellPan,slider,false);
+		id = "cell-attack-slider";
+		slider = window.document.getElementById(id);
+		this.cellAttack = (function($this) {
+			var $r;
+			var min5 = Std.parseInt(slider.min);
+			var max5 = parseFloat(slider.max);
+			$r = new parameter_ParameterBase("cellAttackSlider",parameter__$Parameter_Parameter_$Impl_$.getFloatExponential(min5,max5));
+			return $r;
+		}(this));
+		this.setupParameterSlider(this.cellAttack,slider,false);
+		this.cellOffset.addObserver($bind(this,this.cellOffsetHandler));
+		this.cellDuration.addObserver($bind(this,this.cellDurationHandler));
+		this.cellRate.addObserver($bind(this,this.cellRateHandler));
+		this.cellVolume.addObserver($bind(this,this.cellVolumeHandler));
+		this.cellPan.addObserver($bind(this,this.cellPanHandler));
+		this.cellAttack.addObserver($bind(this,this.cellAttackHandler));
+	}
+	,setupParameterSlider: function(parameter,slider,normalised) {
+		parameter.addObserver(function(p) {
+			var val = p.getValue(normalised);
+			slider.MaterialSlider.change(val);
+			js.JQuery(slider).parent().siblings("div[for=\"" + slider.id + "\"]").text("" + val);
+		});
+		js.JQuery(slider).on("input change",function(_) {
+			parameter.setValue(slider.valueAsNumber,normalised);
+		});
+	}
+	,cellOffsetHandler: function(p) {
+		var track = this.drums.tracks[this.trackIndex];
+		track.events[this.tickIndex].offset = p.getValue() * track.source._buffer.duration;
+	}
+	,cellDurationHandler: function(p) {
+		var track = this.drums.tracks[this.trackIndex];
+		track.events[this.tickIndex].duration = p.getValue() * track.source._buffer.duration;
+	}
+	,cellRateHandler: function(p) {
+		this.drums.tracks[this.trackIndex].events[this.tickIndex].rate = p.getValue();
+	}
+	,cellVolumeHandler: function(p) {
+		this.drums.tracks[this.trackIndex].events[this.tickIndex].volume = p.getValue();
+	}
+	,cellPanHandler: function(p) {
+		this.drums.tracks[this.trackIndex].events[this.tickIndex].pan = p.getValue();
+	}
+	,cellAttackHandler: function(p) {
+		this.drums.tracks[this.trackIndex].events[this.tickIndex].attack = p.getValue();
+	}
+	,__class__: drums_ui_celledit_CellEditControls
+};
 var drums_ui_celledit_CellInfoPanel = function() {
 	drums_ui_UIElement.call(this,170,43);
 	this.bg.alpha = .66;
@@ -1406,7 +1414,10 @@ drums_ui_celledit_CellInfoPanel.prototype = $extend(drums_ui_UIElement.prototype
 var drums_ui_celledit_WaveformPanel = function() {
 	drums_ui_UIElement.call(this,840,198);
 	this.waveform = new drums_Waveform(840,198);
-	this.addChildAt(this.waveform,1);
+	this.overlay = new PIXI.Graphics();
+	this.addChildAt(this.overlay,1);
+	this.addChildAt(this.waveform,2);
+	this.updateOverlay(0,1);
 };
 drums_ui_celledit_WaveformPanel.__name__ = true;
 drums_ui_celledit_WaveformPanel.__super__ = drums_ui_UIElement;
@@ -1415,7 +1426,17 @@ drums_ui_celledit_WaveformPanel.prototype = $extend(drums_ui_UIElement.prototype
 		var buffer = drums1.tracks[trackIndex].source._buffer;
 		this.waveform.drawBuffer(buffer);
 	}
-	,play: function(event) {
+	,updateOverlay: function(offset,duration) {
+		duration = duration - offset;
+		var x = 840 * offset;
+		var w = x + 840 * duration;
+		w = Math.min(840 - x,w);
+		this.overlay.clear();
+		this.overlay.beginFill(0,.1);
+		this.overlay.drawRect(x,0,w,198);
+		this.overlay.endFill();
+	}
+	,play: function(e) {
 	}
 	,drawBg: function(w,h) {
 		drums_ui_UIElement.prototype.drawBg.call(this,w,h);
