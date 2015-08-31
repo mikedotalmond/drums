@@ -140,12 +140,11 @@ var Main = function() {
 	this.randomise = false;
 	pixi_plugins_app_Application.call(this);
 	this.ready = false;
-	this.controls = new drums_ui_Controls();
 	this.initAudio();
 	this.initPixi();
 	this.initBeatLines();
 	this.initStepGrid();
-	this.initControlRouting();
+	this.initControls();
 	this.stageResized();
 };
 Main.__name__ = true;
@@ -157,8 +156,9 @@ Main.main = function() {
 };
 Main.__super__ = pixi_plugins_app_Application;
 Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
-	initControlRouting: function() {
+	initControls: function() {
 		var _g = this;
+		this.controls = new drums_Controls();
 		this.controls.bpm.addObserver(function(p) {
 			_g.drums.set_bpm(p.getValue());
 		});
@@ -172,19 +172,45 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 			_g.randomise = p3.getValue();
 		});
 		this.controls.recordToggle.addObserver(function(p4) {
-			if(!_g.recorder.recording && p4.getValue()) {
-				if(!_g.drums.playing) {
+			var r = p4.getValue();
+			if(!_g.recorder.recording && r) {
+				if(!_g.drums.isPlaying) {
 					p4.setValue(false);
 					return;
 				}
 				console.log("recording...");
 				_g.recorder.worker.postMessage(tones_utils_AudioNodeRecorder.ClearBufferMessage);
 				_g.recorder.recording = true;
-			} else if(_g.recorder.recording) {
+				window.document.getElementById("record-start-tooltip").style.display = "none";
+				window.document.getElementById("record-stop-tooltip").style.display = "block";
+			} else if(_g.recorder.recording && !r) {
+				window.document.getElementById("record-start-tooltip").style.display = "block";
+				window.document.getElementById("record-stop-tooltip").style.display = "none";
+				var resetRecordButtons = function() {
+					window.document.getElementById("save-recording-button").style.display = "none";
+					window.document.getElementById("clear-recording-button").style.display = "none";
+					window.document.getElementById("record-button").style.display = "block";
+				};
+				_g.recorder.wavEncoded.connect(function(data) {
+					console.log("Encoded wav - " + (data.size >> 10) / 1024 + " MB  (" + data.size + " bytes)");
+					window.document.getElementById("save-recording-button").style.display = "block";
+					window.document.getElementById("clear-recording-button").style.display = "block";
+					var link = window.document.getElementById("save-button-link");
+					link.href = URL.createObjectURL(data);
+					link.download = "drums_" + _g.drums._bpm + "bpm.wav";
+					_g.controls.saveRecording.connect(function() {
+						resetRecordButtons();
+					},hxsignal_ConnectionTimes.Once);
+					_g.controls.clearRecording.connect(function() {
+						_g.recorder.worker.postMessage(tones_utils_AudioNodeRecorder.ClearBufferMessage);
+						resetRecordButtons();
+					},hxsignal_ConnectionTimes.Once);
+				},hxsignal_ConnectionTimes.Once);
 				console.log("stopped recording");
 				_g.recorder.recording = false;
-				console.log("encoding wav");
+				console.log("encoding wav...");
 				_g.recorder.worker.postMessage(tones_utils_AudioNodeRecorder.EncodeWAVMessage);
+				window.document.getElementById("record-button").style.display = "none";
 			}
 		});
 		this.controls.swing.addObserver(function(p5) {
@@ -226,6 +252,10 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 				track1.updateOutputState();
 			}
 		});
+		this.drums.playing.connect(function(value) {
+			if(!value && _g.recorder.recording) _g.controls.recordToggle.setValue(false);
+		});
+		this.controls.randomModeToggle.setValue(true);
 	}
 	,initAudio: function() {
 		this.audioContext = tones_AudioBase.createContext();
@@ -236,11 +266,6 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 		this.drums.tick.connect($bind(this,this.onSequenceTick));
 		this.drums.ready.connect($bind(this,this.onDrumsReady));
 		this.recorder = new tones_utils_AudioNodeRecorder(this.drums.output);
-		this.recorder.wavEncoded.connect($bind(this,this.onOutputBufferEncoded));
-	}
-	,onOutputBufferEncoded: function(data) {
-		console.log("Encoded wav - " + (data.size >> 10) / 1024 + " MB  (" + data.size + " bytes)");
-		tones_utils_AudioNodeRecorder.forceDownload(data);
 	}
 	,onDrumsReady: function() {
 		console.log("ready");
@@ -292,11 +317,11 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 		if(this.onResize != null) this.onResize();
 	}
 	,initBeatLines: function() {
-		this.beatLines = new drums_ui_BeatLines(900,448);
+		this.beatLines = new drums_view_sequencer_BeatLines(900,448);
 		this.stage.addChild(this.beatLines);
 	}
 	,initStepGrid: function() {
-		this.sequenceGrid = new drums_ui_SequenceGrid(this.drums);
+		this.sequenceGrid = new drums_view_sequencer_CellGrid(this.drums);
 		this.stage.addChild(this.sequenceGrid);
 	}
 	,tick: function(dt) {
@@ -326,11 +351,188 @@ Std.parseInt = function(x) {
 	if(isNaN(v)) return null;
 	return v;
 };
+var drums_Controls = function() {
+	this.setupControlBar();
+	this.setupTracks();
+	window.addEventListener("keydown",$bind(this,this.onKeyDown));
+	this.muteTracks = new Int8Array([0,0,0,0,0,0,0,0]);
+	this.soloTracks = new Int8Array([0,0,0,0,0,0,0,0]);
+};
+drums_Controls.__name__ = true;
+drums_Controls.prototype = {
+	onKeyDown: function(e) {
+		if(e.ctrlKey || e.shiftKey) return;
+		var _g = e.keyCode;
+		switch(_g) {
+		case 32:case 49:
+			this.playToggle.setValue(!this.playToggle.getValue());
+			break;
+		case 82:case 50:
+			this.randomModeToggle.setValue(!this.randomModeToggle.getValue());
+			break;
+		case 51:case 16:
+			this.recordToggle.setValue(!this.recordToggle.getValue());
+			break;
+		case 52:case 77:
+			this.muteToggle.setValue(!this.muteToggle.getValue());
+			break;
+		case 107:case 187:
+			var val = this.volume.getValue(true) + .1;
+			if(val > 1) val = 1;
+			this.volume.setValue(val,true);
+			break;
+		case 189:case 109:
+			var val1 = this.volume.getValue(true) - .1;
+			if(val1 < 0) val1 = 0;
+			this.volume.setValue(val1,true);
+			break;
+		}
+	}
+	,setupControlBar: function() {
+		var _g = this;
+		var byId = ($_=window.document,$bind($_,$_.getElementById));
+		this.playToggle = new parameter_ParameterBase("playToggle",parameter__$Parameter_Parameter_$Impl_$.getBool(true,false));
+		this.playToggle.addObserver(function(p) {
+			var state = p.getValue();
+			byId("play-button").style.display = state?"none":"";
+			byId("stop-button").style.display = state?"":"none";
+		});
+		js.JQuery("#play-button").on("click tap",function(_) {
+			_g.playToggle.setValue(true);
+		});
+		js.JQuery("#stop-button").on("click tap",function(_1) {
+			_g.playToggle.setValue(false);
+		});
+		var randomButton = byId("shuffle-button");
+		this.randomModeToggle = new parameter_ParameterBase("randomModeToggle",parameter__$Parameter_Parameter_$Impl_$.getBool(false,true));
+		this.randomModeToggle.addObserver(function(p1) {
+			if(p1.getValue()) randomButton.classList.add("mdl-button--accent"); else randomButton.classList.remove("mdl-button--accent");
+		});
+		js.JQuery(randomButton).on("click tap",function(_2) {
+			_g.randomModeToggle.setValue(!_g.randomModeToggle.getValue());
+		});
+		var recordButton = byId("record-button");
+		this.recordToggle = new parameter_ParameterBase("recordToggle",parameter__$Parameter_Parameter_$Impl_$.getBool(false,true));
+		this.recordToggle.addObserver(function(p2) {
+			if(p2.getValue()) recordButton.classList.add("mdl-button--accent"); else recordButton.classList.remove("mdl-button--accent");
+		});
+		js.JQuery(recordButton).on("click tap",function(_3) {
+			_g.recordToggle.setValue(!_g.recordToggle.getValue());
+		});
+		this.saveRecording = new hxsignal_impl_Signal0();
+		js.JQuery(byId("save-recording-button")).on("click tap",function(_4) {
+			_g.saveRecording.emit();
+		});
+		this.clearRecording = new hxsignal_impl_Signal0();
+		js.JQuery(byId("clear-recording-button")).on("click tap",function(_5) {
+			_g.clearRecording.emit();
+		});
+		var bpmSlider = byId("bpm-slider");
+		this.bpm = (function($this) {
+			var $r;
+			var min = Std.parseInt(bpmSlider.min);
+			var max = Std.parseInt(bpmSlider.max);
+			$r = new parameter_ParameterBase("bpmSlider",parameter__$Parameter_Parameter_$Impl_$.getInt(min,max));
+			return $r;
+		}(this));
+		this.bpm.addObserver(function(p3) {
+			var val = p3.getValue();
+			bpmSlider.MaterialSlider.change(val);
+			js.JQuery(bpmSlider).parent().siblings("div[for=\"bpm-slider\"]").text("" + val);
+		});
+		js.JQuery("#bpm-slider").on("input change",function(_6) {
+			_g.bpm.setValue(bpmSlider.valueAsNumber | 0);
+		});
+		this.bpm.setDefault(bpmSlider.valueAsNumber | 0);
+		var swingSlider = byId("swing-slider");
+		this.swing = (function($this) {
+			var $r;
+			var min1 = Std.parseInt(swingSlider.min);
+			var max1 = parseFloat(swingSlider.max);
+			$r = new parameter_ParameterBase("swingSlider",parameter__$Parameter_Parameter_$Impl_$.getFloat(min1,max1));
+			return $r;
+		}(this));
+		this.swing.addObserver(function(p4) {
+			var val1 = p4.getValue();
+			swingSlider.MaterialSlider.change(val1);
+			js.JQuery(swingSlider).parent().siblings("div[for=\"swing-slider\"]").text("" + (val1 * 100 | 0) + "%");
+		});
+		js.JQuery("#swing-slider").on("input change",function(_7) {
+			_g.swing.setValue(swingSlider.valueAsNumber);
+		});
+		this.swing.setDefault(swingSlider.valueAsNumber);
+		var volumeSlider = byId("volume-slider");
+		this.volume = (function($this) {
+			var $r;
+			var min2 = Std.parseInt(volumeSlider.min);
+			var max2 = parseFloat(volumeSlider.max);
+			$r = new parameter_ParameterBase("volumeSlider",parameter__$Parameter_Parameter_$Impl_$.getFloatExponential(min2,max2));
+			return $r;
+		}(this));
+		this.volume.addObserver(function(p5) {
+			var normValue = p5.getValue(true);
+			volumeSlider.MaterialSlider.change(normValue);
+			js.JQuery(volumeSlider).parent().siblings("div[for=\"volume-slider\"]").text("" + normValue);
+		});
+		js.JQuery("#volume-slider").on("input change",function(_8) {
+			_g.volume.setValue(volumeSlider.valueAsNumber,true);
+		});
+		this.volume.setDefault(volumeSlider.valueAsNumber,true);
+		this.muteToggle = new parameter_ParameterBase("muteToggle",parameter__$Parameter_Parameter_$Impl_$.getBool(false,true));
+		this.muteToggle.addObserver(function(p6) {
+			var state1 = p6.getValue();
+			if(state1) volumeSlider.MaterialSlider.disable(); else volumeSlider.MaterialSlider.enable();
+			byId("mute-button").style.display = state1?"none":"";
+			byId("unmute-button").style.display = state1?"":"none";
+		});
+		js.JQuery("#mute-button").on("click tap",function(_9) {
+			_g.muteToggle.setValue(true);
+		});
+		js.JQuery("#unmute-button").on("click tap",function(_10) {
+			_g.muteToggle.setValue(false);
+		});
+	}
+	,setupTracks: function() {
+		var _g = this;
+		this.trackShuffle = new hxsignal_impl_Signal1();
+		this.trackMute = new hxsignal_impl_Signal2();
+		this.trackSolo = new hxsignal_impl_Signal2();
+		this.trackMute.connect(function(i,state) {
+			if(state) js.JQuery("#track-mute-" + i).addClass("mdl-button--accent"); else js.JQuery("#track-mute-" + i).removeClass("mdl-button--accent");
+			_g.muteTracks[i] = state?1:0;
+		});
+		this.trackSolo.connect(function(i1,state1) {
+			if(state1) js.JQuery("#track-solo-" + i1).addClass("mdl-button--accent"); else js.JQuery("#track-solo-" + i1).removeClass("mdl-button--accent");
+			_g.soloTracks[i1] = state1?1:0;
+		});
+		var _g1 = 0;
+		while(_g1 < 8) {
+			var i2 = [_g1++];
+			js.JQuery("#track-shuffle-" + i2[0]).on("click tap",(function(i2) {
+				return function(_) {
+					_g.trackShuffle.emit(i2[0]);
+				};
+			})(i2));
+			js.JQuery("#track-mute-" + i2[0]).on("click tap",(function(i2) {
+				return function(_1) {
+					_g.trackMute.emit(i2[0],!js.JQuery("#track-mute-" + i2[0]).hasClass("mdl-button--accent"));
+				};
+			})(i2));
+			js.JQuery("#track-solo-" + i2[0]).on("click tap",(function(i2) {
+				return function(_2) {
+					_g.trackSolo.emit(i2[0],!js.JQuery("#track-solo-" + i2[0]).hasClass("mdl-button--accent"));
+				};
+			})(i2));
+		}
+	}
+	,__class__: drums_Controls
+};
 var drums_DrumSequencer = function(audioContext,destination) {
 	this.tickIndex = -1;
 	this.set_bpm(120);
 	this.set_swing(0);
-	this.playing = false;
+	this.playing = new hxsignal_impl_Signal1();
+	this.isPlaying = false;
 	this.context = audioContext == null?tones_AudioBase.createContext():audioContext;
 	this.output = this.context.createGain();
 	this.output.connect(destination == null?this.context.destination:destination);
@@ -343,15 +545,17 @@ drums_DrumSequencer.__name__ = true;
 drums_DrumSequencer.prototype = {
 	play: function(tick) {
 		if(tick == null) tick = 0;
-		this.playing = true;
+		this.isPlaying = true;
 		this.tickIndex = tick - 1;
 		this.timeTrack.removeAllTimedEvents();
 		this.timeTrack.addTimedEvent(this.context.currentTime + 0.0083333333333333332);
+		this.playing.emit(true);
 	}
 	,stop: function() {
-		this.playing = false;
+		this.isPlaying = false;
 		this.tickIndex = -1;
 		this.timeTrack.removeAllTimedEvents();
+		this.playing.emit(false);
 	}
 	,toggleEvent: function(trackIndex,tickIndex) {
 		var track = this.tracks[trackIndex];
@@ -395,7 +599,7 @@ drums_DrumSequencer.prototype = {
 		} else if(this.loadCount == drums_DrumSequencer.filenames.length) this.ready.emit();
 	}
 	,onTrackTick: function(id,time) {
-		if(!this.playing) return;
+		if(!this.isPlaying) return;
 		if(time < this.context.currentTime) time = this.context.currentTime;
 		var offset = .0;
 		if(this._swing > 0) {
@@ -525,7 +729,7 @@ drums_Track.prototype = {
 	}
 	,__class__: drums_Track
 };
-var drums_Pointer = function() {
+var drums_view_Pointer = function() {
 	this.lastTime = 0;
 	this.timeDown = 0;
 	this.isDown = false;
@@ -538,8 +742,8 @@ var drums_Pointer = function() {
 	this.pressProgress = new hxsignal_impl_Signal2();
 	tones_utils_TimeUtil.get_frameTick().connect($bind(this,this.update));
 };
-drums_Pointer.__name__ = true;
-drums_Pointer.prototype = {
+drums_view_Pointer.__name__ = true;
+drums_view_Pointer.prototype = {
 	watch: function(target) {
 		target.on("mousemove",$bind(this,this.onMove));
 		target.on("mousedown",$bind(this,this.onDown));
@@ -577,16 +781,34 @@ drums_Pointer.prototype = {
 	,onMove: function(e) {
 		this.moved = true;
 	}
-	,__class__: drums_Pointer
+	,__class__: drums_view_Pointer
 };
-var drums_Waveform = function(width,height) {
+var drums_view_UIElement = function(width,height) {
+	PIXI.Container.call(this);
+	this.interactive = false;
+	this.bg = new PIXI.Graphics();
+	this.drawBg(width,height);
+	this.addChild(this.bg);
+};
+drums_view_UIElement.__name__ = true;
+drums_view_UIElement.__super__ = PIXI.Container;
+drums_view_UIElement.prototype = $extend(PIXI.Container.prototype,{
+	drawBg: function(w,h) {
+		this.bg.clear();
+		this.bg.beginFill(817360);
+		this.bg.drawRect(0,0,w,h);
+		this.bg.endFill();
+	}
+	,__class__: drums_view_UIElement
+});
+var drums_view_displays_Waveform = function(width,height) {
 	PIXI.Graphics.call(this);
 	this.displayWidth = width;
 	this.displayHeight = height;
 };
-drums_Waveform.__name__ = true;
-drums_Waveform.__super__ = PIXI.Graphics;
-drums_Waveform.prototype = $extend(PIXI.Graphics.prototype,{
+drums_view_displays_Waveform.__name__ = true;
+drums_view_displays_Waveform.__super__ = PIXI.Graphics;
+drums_view_displays_Waveform.prototype = $extend(PIXI.Graphics.prototype,{
 	drawBuffer: function(buffer,normalise) {
 		if(normalise == null) normalise = true;
 		var peaks = buffer == this.lastBuffer?this.lastPeaks:this.getPeaks(this.displayWidth >> 1,buffer);
@@ -650,600 +872,9 @@ drums_Waveform.prototype = $extend(PIXI.Graphics.prototype,{
 		}
 		return new Float32Array(mergedPeaks);
 	}
-	,__class__: drums_Waveform
+	,__class__: drums_view_displays_Waveform
 });
-var drums_ui_BeatLines = function(displayWidth,displayHeight) {
-	PIXI.Container.call(this);
-	this.interactive = false;
-	this.interactiveChildren = false;
-	this.displayWidth = displayWidth;
-	this.displayHeight = displayHeight;
-	this.xStep = displayWidth / 16;
-	this.lines = [];
-	var g;
-	var _g = 0;
-	while(_g < 16) {
-		var i = _g++;
-		g = new PIXI.Graphics();
-		g.position.x = Math.round(this.xStep * i);
-		this.lines.push(this.addChild(g));
-	}
-	var _g1 = 0;
-	while(_g1 < 16) {
-		var i1 = _g1++;
-		this.tick(i1);
-	}
-	tones_utils_TimeUtil.get_frameTick().connect($bind(this,this.update));
-};
-drums_ui_BeatLines.__name__ = true;
-drums_ui_BeatLines.__super__ = PIXI.Container;
-drums_ui_BeatLines.prototype = $extend(PIXI.Container.prototype,{
-	tick: function(index) {
-		if(index < 0) return;
-		this.drawLine(this.lines[index],16);
-	}
-	,update: function(dt) {
-		var _g = 0;
-		while(_g < 16) {
-			var i = _g++;
-			var gfx = this.lines[i];
-			var currentWidth = gfx.width;
-			if(currentWidth > 1) {
-				var w = currentWidth - (currentWidth - 1) * .15;
-				this.drawLine(gfx,w);
-			}
-		}
-	}
-	,drawLine: function(g,w) {
-		g.clear();
-		g.beginFill(2201331,1);
-		g.drawRect(-w / 2,0,w,this.displayHeight);
-		g.endFill();
-	}
-	,__class__: drums_ui_BeatLines
-});
-var drums_ui_CellEditPanel = function(drums1,pointer,displayWidth,displayHeight) {
-	this.closing = false;
-	this.launching = false;
-	this.fadeUI = false;
-	this.bgSize = 0;
-	var _g = this;
-	PIXI.Container.call(this);
-	this.visible = false;
-	this.closed = new hxsignal_impl_Signal0();
-	this.drums = drums1;
-	this.displayWidth = displayWidth;
-	this.displayHeight = displayHeight;
-	this.bg = new PIXI.Graphics();
-	this.bg.interactive = true;
-	this.addChild(this.bg);
-	this.setupUI(pointer);
-	this.controls = new drums_ui_celledit_CellEditControls(drums1);
-	this.controls.close.connect($bind(this,this.close));
-	this.controls.play.connect($bind(this,this.playNow));
-	this.controls.editNextPrev.connect(function(i) {
-		_g.edit(_g.controls.trackIndex,i);
-	});
-	var f = function(val) {
-		_g.waveform.updateOverlay(_g.controls.cellOffset.getValue(true),_g.controls.cellDuration.getValue(true));
-	};
-	this.controls.cellOffset.addObserver(f);
-	this.controls.cellDuration.addObserver(f);
-};
-drums_ui_CellEditPanel.__name__ = true;
-drums_ui_CellEditPanel.__super__ = PIXI.Container;
-drums_ui_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
-	edit: function(trackIndex,tickIndex) {
-		if(tickIndex > 15) tickIndex = 0; else if(tickIndex < 0) tickIndex = 15;
-		if(trackIndex > 7) trackIndex = 0; else if(trackIndex < 0) trackIndex = 7;
-		var sameTrack = this.trackIndex == trackIndex;
-		this.trackIndex = trackIndex;
-		this.tickIndex = tickIndex;
-		if(!this.visible) {
-			this.visible = this.launching = true;
-			this.fadeUI = this.closing = false;
-			this.bgSize = 0;
-			this.uiContainer.alpha = 0;
-		} else if(!sameTrack) {
-			this.visible = true;
-			this.launching = this.closing = false;
-			this.fadeUI = true;
-			this.bgSize = 1;
-			this.uiContainer.alpha = 0;
-		}
-		this.event = this.drums.tracks[trackIndex].events[tickIndex];
-		this.waveform.setup(this.drums,trackIndex,tickIndex);
-		this.waveform.updateOverlay(this.controls.cellOffset.getValue(true),this.controls.cellDuration.getValue(true));
-		this.cellInfo.update(this.drums,trackIndex,tickIndex);
-		this.controls.update(trackIndex,tickIndex);
-		window.removeEventListener("keydown",$bind(this,this.onKeyDown));
-		window.addEventListener("keydown",$bind(this,this.onKeyDown));
-	}
-	,onKeyDown: function(e) {
-		var _g = e.keyCode;
-		switch(_g) {
-		case 80:
-			this.drums.playTrackCellNow(this.trackIndex,this.tickIndex);
-			break;
-		case 37:
-			this.edit(this.trackIndex,this.tickIndex - 1);
-			break;
-		case 39:
-			this.edit(this.trackIndex,this.tickIndex + 1);
-			break;
-		case 38:
-			this.edit(this.trackIndex - 1,this.tickIndex);
-			break;
-		case 40:
-			this.edit(this.trackIndex + 1,this.tickIndex);
-			break;
-		}
-	}
-	,close: function() {
-		window.removeEventListener("keydown",$bind(this,this.onKeyDown));
-		this.bg.pivot.set(0,0);
-		this.bg.position.set(0,0);
-		this.bg.scale.set(1,1);
-		this.closing = true;
-		this.launching = false;
-		this.uiContainer.alpha = 0;
-		this.trackIndex = -1;
-		this.tickIndex = -1;
-		this.closed.emit();
-	}
-	,tick: function(index) {
-		if(index == this.tickIndex && this.event.active) this.waveform.play(this.event);
-	}
-	,update: function() {
-		if(!this.visible) return;
-		if(this.launching || this.closing) {
-			this.bgSize += this.launching?.08:-.07;
-			if(this.bgSize >= 1) this.onLaunched(); else if(this.bgSize <= 0) this.onClosed();
-			this.drawBg(this.bgSize);
-		} else if(this.fadeUI && this.uiContainer.alpha < 1) {
-			this.uiContainer.alpha += .09;
-			this.controls.container.style.opacity = "" + this.uiContainer.alpha;
-			if(this.uiContainer.alpha >= 1) {
-				this.uiContainer.alpha = 1;
-				this.fadeUI = false;
-			}
-		}
-	}
-	,setupUI: function(pointer) {
-		this.uiContainer = new PIXI.Container();
-		var bg = new PIXI.Graphics();
-		bg.beginFill(819422);
-		bg.drawRect(-18.125,-18.,880,428);
-		bg.endFill();
-		this.waveform = new drums_ui_celledit_WaveformPanel();
-		this.cellInfo = new drums_ui_celledit_CellInfoPanel();
-		this.uiContainer.addChild(bg);
-		this.uiContainer.addChild(this.waveform);
-		this.uiContainer.addChild(this.cellInfo);
-		this.uiContainer.alpha = 0;
-		this.addChild(this.uiContainer);
-	}
-	,onLaunched: function() {
-		this.launching = false;
-		this.bgSize = 1;
-		this.fadeUI = true;
-	}
-	,onClosed: function() {
-		this.trackIndex = -1;
-		this.tickIndex = -1;
-		this.closing = this.visible = false;
-		this.bgSize = 0;
-	}
-	,drawBg: function(size) {
-		this.bg.position.set(0,0);
-		this.bg.clear();
-		if(size == 1) {
-			this.bg.beginFill(2201331);
-			this.bg.drawRect(-28.125,-28.,900,448);
-			this.bg.endFill();
-			return;
-		}
-		var size1 = size * size;
-		var startX = this.tickIndex * 56.25;
-		var startY = this.trackIndex * 56.;
-		var right;
-		var left;
-		var up;
-		var down;
-		right = (this.displayWidth - startX - 56.25 + 28.125) * size1;
-		down = (this.displayHeight - startY - 56. + 28.) * size1;
-		left = (-startX * size1 - 56.25 + 28.125) * size1;
-		up = (-startY * size1 - 56. + 28.) * size1;
-		this.bg.beginFill(2201331,size1);
-		this.bg.drawRect(startX,startY,right,down);
-		this.bg.drawRect(startX,startY,left,up);
-		this.bg.drawRect(startX,startY,right,up);
-		this.bg.drawRect(startX,startY,left,down);
-		this.bg.endFill();
-	}
-	,playNow: function() {
-		this.drums.playTrackCellNow(this.trackIndex,this.tickIndex);
-	}
-	,__class__: drums_ui_CellEditPanel
-});
-var drums_ui_Controls = function() {
-	this.setupControlBar();
-	this.setupTracks();
-	window.addEventListener("keydown",$bind(this,this.onKeyDown));
-	this.muteTracks = new Int8Array([0,0,0,0,0,0,0,0]);
-	this.soloTracks = new Int8Array([0,0,0,0,0,0,0,0]);
-};
-drums_ui_Controls.__name__ = true;
-drums_ui_Controls.prototype = {
-	onKeyDown: function(e) {
-		if(e.ctrlKey || e.shiftKey) return;
-		var _g = e.keyCode;
-		switch(_g) {
-		case 32:case 49:
-			this.playToggle.setValue(!this.playToggle.getValue());
-			break;
-		case 82:case 50:
-			this.randomModeToggle.setValue(!this.randomModeToggle.getValue());
-			break;
-		case 51:case 16:
-			this.recordToggle.setValue(!this.recordToggle.getValue());
-			break;
-		case 52:case 77:
-			this.muteToggle.setValue(!this.muteToggle.getValue());
-			break;
-		case 107:case 187:
-			var val = this.volume.getValue(true) + .1;
-			if(val > 1) val = 1;
-			this.volume.setValue(val,true);
-			break;
-		case 189:case 109:
-			var val1 = this.volume.getValue(true) - .1;
-			if(val1 < 0) val1 = 0;
-			this.volume.setValue(val1,true);
-			break;
-		}
-	}
-	,setupControlBar: function() {
-		var _g = this;
-		var byId = ($_=window.document,$bind($_,$_.getElementById));
-		this.playToggle = new parameter_ParameterBase("playToggle",parameter__$Parameter_Parameter_$Impl_$.getBool(true,false));
-		this.playToggle.addObserver(function(p) {
-			var state = p.getValue();
-			byId("play-button").style.display = state?"none":"";
-			byId("stop-button").style.display = state?"":"none";
-		});
-		js.JQuery("#play-button").on("click tap",function(_) {
-			_g.playToggle.setValue(true);
-		});
-		js.JQuery("#stop-button").on("click tap",function(_1) {
-			_g.playToggle.setValue(false);
-		});
-		var randomButton = byId("shuffle-button");
-		this.randomModeToggle = new parameter_ParameterBase("randomModeToggle",parameter__$Parameter_Parameter_$Impl_$.getBool(false,true));
-		this.randomModeToggle.addObserver(function(p1) {
-			if(p1.getValue()) randomButton.classList.add("mdl-button--accent"); else randomButton.classList.remove("mdl-button--accent");
-		});
-		js.JQuery(randomButton).on("click tap",function(_2) {
-			_g.randomModeToggle.setValue(!_g.randomModeToggle.getValue());
-		});
-		var recordButton = byId("record-button");
-		this.recordToggle = new parameter_ParameterBase("recordToggle",parameter__$Parameter_Parameter_$Impl_$.getBool(false,true));
-		this.recordToggle.addObserver(function(p2) {
-			if(p2.getValue()) recordButton.classList.add("mdl-button--accent"); else recordButton.classList.remove("mdl-button--accent");
-		});
-		js.JQuery(recordButton).on("click tap",function(_3) {
-			_g.recordToggle.setValue(!_g.recordToggle.getValue());
-		});
-		var bpmSlider = byId("bpm-slider");
-		this.bpm = (function($this) {
-			var $r;
-			var min = Std.parseInt(bpmSlider.min);
-			var max = Std.parseInt(bpmSlider.max);
-			$r = new parameter_ParameterBase("bpmSlider",parameter__$Parameter_Parameter_$Impl_$.getInt(min,max));
-			return $r;
-		}(this));
-		this.bpm.addObserver(function(p3) {
-			var val = p3.getValue();
-			bpmSlider.MaterialSlider.change(val);
-			js.JQuery(bpmSlider).parent().siblings("div[for=\"bpm-slider\"]").text("" + val);
-		});
-		js.JQuery("#bpm-slider").on("input change",function(_4) {
-			_g.bpm.setValue(bpmSlider.valueAsNumber | 0);
-		});
-		this.bpm.setDefault(bpmSlider.valueAsNumber | 0);
-		var swingSlider = byId("swing-slider");
-		this.swing = (function($this) {
-			var $r;
-			var min1 = Std.parseInt(swingSlider.min);
-			var max1 = parseFloat(swingSlider.max);
-			$r = new parameter_ParameterBase("swingSlider",parameter__$Parameter_Parameter_$Impl_$.getFloat(min1,max1));
-			return $r;
-		}(this));
-		this.swing.addObserver(function(p4) {
-			var val1 = p4.getValue();
-			swingSlider.MaterialSlider.change(val1);
-			js.JQuery(swingSlider).parent().siblings("div[for=\"swing-slider\"]").text("" + (val1 * 100 | 0) + "%");
-		});
-		js.JQuery("#swing-slider").on("input change",function(_5) {
-			_g.swing.setValue(swingSlider.valueAsNumber);
-		});
-		this.swing.setDefault(swingSlider.valueAsNumber);
-		var volumeSlider = byId("volume-slider");
-		this.volume = (function($this) {
-			var $r;
-			var min2 = Std.parseInt(volumeSlider.min);
-			var max2 = parseFloat(volumeSlider.max);
-			$r = new parameter_ParameterBase("volumeSlider",parameter__$Parameter_Parameter_$Impl_$.getFloatExponential(min2,max2));
-			return $r;
-		}(this));
-		this.volume.addObserver(function(p5) {
-			var normValue = p5.getValue(true);
-			volumeSlider.MaterialSlider.change(normValue);
-			js.JQuery(volumeSlider).parent().siblings("div[for=\"volume-slider\"]").text("" + normValue);
-		});
-		js.JQuery("#volume-slider").on("input change",function(_6) {
-			_g.volume.setValue(volumeSlider.valueAsNumber,true);
-		});
-		this.volume.setDefault(volumeSlider.valueAsNumber,true);
-		this.muteToggle = new parameter_ParameterBase("muteToggle",parameter__$Parameter_Parameter_$Impl_$.getBool(false,true));
-		this.muteToggle.addObserver(function(p6) {
-			var state1 = p6.getValue();
-			if(state1) volumeSlider.MaterialSlider.disable(); else volumeSlider.MaterialSlider.enable();
-			byId("mute-button").style.display = state1?"none":"";
-			byId("unmute-button").style.display = state1?"":"none";
-		});
-		js.JQuery("#mute-button").on("click tap",function(_7) {
-			_g.muteToggle.setValue(true);
-		});
-		js.JQuery("#unmute-button").on("click tap",function(_8) {
-			_g.muteToggle.setValue(false);
-		});
-	}
-	,setupTracks: function() {
-		var _g = this;
-		this.trackShuffle = new hxsignal_impl_Signal1();
-		this.trackMute = new hxsignal_impl_Signal2();
-		this.trackSolo = new hxsignal_impl_Signal2();
-		this.trackMute.connect(function(i,state) {
-			if(state) js.JQuery("#track-mute-" + i).addClass("mdl-button--accent"); else js.JQuery("#track-mute-" + i).removeClass("mdl-button--accent");
-			_g.muteTracks[i] = state?1:0;
-		});
-		this.trackSolo.connect(function(i1,state1) {
-			if(state1) js.JQuery("#track-solo-" + i1).addClass("mdl-button--accent"); else js.JQuery("#track-solo-" + i1).removeClass("mdl-button--accent");
-			_g.soloTracks[i1] = state1?1:0;
-		});
-		var _g1 = 0;
-		while(_g1 < 8) {
-			var i2 = [_g1++];
-			js.JQuery("#track-shuffle-" + i2[0]).on("click tap",(function(i2) {
-				return function(_) {
-					_g.trackShuffle.emit(i2[0]);
-				};
-			})(i2));
-			js.JQuery("#track-mute-" + i2[0]).on("click tap",(function(i2) {
-				return function(_1) {
-					_g.trackMute.emit(i2[0],!js.JQuery("#track-mute-" + i2[0]).hasClass("mdl-button--accent"));
-				};
-			})(i2));
-			js.JQuery("#track-solo-" + i2[0]).on("click tap",(function(i2) {
-				return function(_2) {
-					_g.trackSolo.emit(i2[0],!js.JQuery("#track-solo-" + i2[0]).hasClass("mdl-button--accent"));
-				};
-			})(i2));
-		}
-	}
-	,__class__: drums_ui_Controls
-};
-var drums_ui_SequenceGrid = function(drums1) {
-	PIXI.Container.call(this);
-	this.drums = drums1;
-	this.displayHeight = 448;
-	this.cells = [];
-	this.pointer = new drums_Pointer();
-	this.cellEditPanel = new drums_ui_CellEditPanel(drums1,this.pointer,900,448);
-	this.cellUI = new drums_ui_CellUI(this.pointer);
-	this.cellUI.editEvent.connect(($_=this.cellEditPanel,$bind($_,$_.edit)));
-	this.cellUI.toggleEvent.connect($bind(drums1,drums1.toggleEvent));
-	this.createCells();
-	this.cellEditPanel.closed.connect(($_=this.cellUI,$bind($_,$_.clear)));
-	this.addChild(this.cellEditPanel);
-};
-drums_ui_SequenceGrid.__name__ = true;
-drums_ui_SequenceGrid.__super__ = PIXI.Container;
-drums_ui_SequenceGrid.prototype = $extend(PIXI.Container.prototype,{
-	createCells: function() {
-		var g;
-		var background = new PIXI.Container();
-		var _g = 0;
-		while(_g < 8) {
-			var i = _g++;
-			var _g1 = 0;
-			while(_g1 < 16) {
-				var j = _g1++;
-				g = new PIXI.Graphics();
-				g.position.x = Math.round(j * 56.25);
-				g.position.y = Math.round(i * 56.);
-				this.drawCell(g,52,0);
-				background.addChild(g);
-			}
-		}
-		background.interactive = false;
-		background.interactiveChildren = false;
-		background.cacheAsBitmap = true;
-		this.addChild(background);
-		this.addChild(this.cellUI);
-		var _g2 = 0;
-		while(_g2 < 8) {
-			var i1 = _g2++;
-			this.cells.push([]);
-			var _g11 = 0;
-			while(_g11 < 16) {
-				var j1 = _g11++;
-				g = new PIXI.Graphics();
-				g.position.x = Math.round(j1 * 56.25);
-				g.position.y = Math.round(i1 * 56.);
-				g.interactive = true;
-				g.name = "" + i1 + "," + j1;
-				this.pointer.watch(g);
-				this.cells[i1].push(this.addChild(g));
-			}
-		}
-	}
-	,drawCell: function(g,size,color) {
-		g.clear();
-		g.beginFill(color,1);
-		g.drawRect(-(size / 2),-(size / 2),size,size);
-		g.endFill();
-	}
-	,tick: function(index) {
-		if(index < 0) return;
-		var cell;
-		var event;
-		var tracks = this.drums.tracks;
-		var _g = 0;
-		while(_g < 8) {
-			var i = _g++;
-			event = tracks[i].events[index];
-			if(event.active) {
-				cell = this.cells[i][index];
-				cell.lineColor = 16777215;
-				this.drawCell(cell,52,16777215);
-			}
-		}
-		this.cellEditPanel.tick(index);
-	}
-	,update: function(dt) {
-		var c;
-		var cell;
-		var active;
-		var tracks = this.drums.tracks;
-		var _g = 0;
-		while(_g < 8) {
-			var i = _g++;
-			var _g1 = 0;
-			while(_g1 < 16) {
-				var j = _g1++;
-				cell = this.cells[i][j];
-				active = tracks[i].events[j].active;
-				var w = cell.width;
-				if(active && w > 41.6) {
-					var p = (w / 41.6 - 1) * 4;
-					var intensity = 48 + (207 * p | 0);
-					var size = w - (w - 41.6) * .1;
-					if(p < .001) size = 41.6;
-					this.drawCell(cell,size,intensity | intensity << 8 | intensity << 16);
-				} else {
-					c = active?3158064:1184274;
-					if(cell.lineColor != c) {
-						cell.lineColor = c;
-						this.drawCell(cell,41.6,c);
-					}
-				}
-			}
-		}
-		this.cellUI.update();
-		this.cellEditPanel.update();
-	}
-	,__class__: drums_ui_SequenceGrid
-});
-var drums_ui_CellUI = function(pointer) {
-	this.isDown = false;
-	this.fading = false;
-	PIXI.Graphics.call(this);
-	this.toggleEvent = new hxsignal_impl_Signal2();
-	this.editEvent = new hxsignal_impl_Signal2();
-	pointer.click.connect($bind(this,this.onClick));
-	pointer.down.connect($bind(this,this.onDown));
-	pointer.up.connect($bind(this,this.onPressCancel));
-	pointer.longPress.connect($bind(this,this.onLongPress));
-	pointer.pressCancel.connect($bind(this,this.onPressCancel));
-	pointer.pressProgress.connect($bind(this,this.onPressProgress));
-};
-drums_ui_CellUI.__name__ = true;
-drums_ui_CellUI.__super__ = PIXI.Graphics;
-drums_ui_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
-	onClick: function(target) {
-		if(target.parent != this.parent) return;
-		var values = target.name.split(",");
-		var trackIndex = Std.parseInt(values[0]);
-		var tickIndex = Std.parseInt(values[1]);
-		this.toggleEvent.emit(trackIndex,tickIndex);
-	}
-	,onDown: function(target) {
-		if(target.parent != this.parent) return;
-		this.clear();
-		this.x = target.x;
-		this.y = target.y;
-		this.beginFill(2201331,0.25);
-		this.drawRect(-26.,-26.,52,52);
-		this.endFill();
-		this.alpha = 0;
-		this.isDown = true;
-		this.fading = false;
-	}
-	,onPressProgress: function(target,p) {
-		if(target.parent != this.parent) return;
-		this.x = target.x;
-		this.y = target.y;
-		this.clear();
-		this.alpha = 1;
-		var pp = p * p;
-		var ppp = pp * p;
-		this.beginFill(2201331,.25 + ppp * .25);
-		this.drawRect(-26.,-26.,52,52);
-		this.endFill();
-		this.beginFill(2201331,pp);
-		this.drawRect(-26.,-26.,pp * 52,52);
-		this.endFill();
-	}
-	,onLongPress: function(target) {
-		if(target.parent != this.parent) return;
-		this.isDown = false;
-		this.beginFill(2201331,1);
-		this.drawRect(-26.,-26.,52,52);
-		this.endFill();
-		var values = target.name.split(",");
-		var trackIndex = Std.parseInt(values[0]);
-		var tickIndex = Std.parseInt(values[1]);
-		this.editEvent.emit(trackIndex,tickIndex);
-	}
-	,onPressCancel: function(target) {
-		if(target != null && target.parent != this.parent) return;
-		this.fading = true;
-		this.isDown = false;
-	}
-	,update: function() {
-		if(this.fading) {
-			if(this.alpha > 0.001) this.alpha *= .75; else {
-				this.clear();
-				this.alpha = 1;
-				this.fading = false;
-			}
-		} else if(this.isDown) {
-			if(this.alpha < 1) this.alpha += .05;
-		}
-	}
-	,__class__: drums_ui_CellUI
-});
-var drums_ui_UIElement = function(width,height) {
-	PIXI.Container.call(this);
-	this.interactive = false;
-	this.bg = new PIXI.Graphics();
-	this.drawBg(width,height);
-	this.addChild(this.bg);
-};
-drums_ui_UIElement.__name__ = true;
-drums_ui_UIElement.__super__ = PIXI.Container;
-drums_ui_UIElement.prototype = $extend(PIXI.Container.prototype,{
-	drawBg: function(w,h) {
-		this.bg.clear();
-		this.bg.beginFill(817360);
-		this.bg.drawRect(0,0,w,h);
-		this.bg.endFill();
-	}
-	,__class__: drums_ui_UIElement
-});
-var drums_ui_celledit_CellEditControls = function(drums1) {
+var drums_view_edit_CellEditControls = function(drums1) {
 	var _g = this;
 	this.trackIndex = -1;
 	this.tickIndex = -1;
@@ -1273,8 +904,8 @@ var drums_ui_celledit_CellEditControls = function(drums1) {
 	});
 	this.setupSliders();
 };
-drums_ui_celledit_CellEditControls.__name__ = true;
-drums_ui_celledit_CellEditControls.prototype = {
+drums_view_edit_CellEditControls.__name__ = true;
+drums_view_edit_CellEditControls.prototype = {
 	update: function(trackIndex,tickIndex) {
 		var sameTrack = this.trackIndex == trackIndex;
 		this.trackIndex = trackIndex;
@@ -1391,37 +1022,214 @@ drums_ui_celledit_CellEditControls.prototype = {
 	,cellAttackHandler: function(p) {
 		this.drums.tracks[this.trackIndex].events[this.tickIndex].attack = p.getValue();
 	}
-	,__class__: drums_ui_celledit_CellEditControls
+	,__class__: drums_view_edit_CellEditControls
 };
-var drums_ui_celledit_CellInfoPanel = function() {
-	drums_ui_UIElement.call(this,170,43);
+var drums_view_edit_CellEditPanel = function(drums1,pointer,displayWidth,displayHeight) {
+	this.ticked = 0.0;
+	this.closing = false;
+	this.launching = false;
+	this.fadeUI = false;
+	this.bgSize = 0;
+	var _g = this;
+	PIXI.Container.call(this);
+	this.visible = false;
+	this.closed = new hxsignal_impl_Signal0();
+	this.drums = drums1;
+	this.displayWidth = displayWidth;
+	this.displayHeight = displayHeight;
+	this.bg = new PIXI.Graphics();
+	this.addChild(this.bg);
+	this.setupUI(pointer);
+	this.controls = new drums_view_edit_CellEditControls(drums1);
+	this.controls.close.connect($bind(this,this.close));
+	this.controls.play.connect($bind(this,this.playNow));
+	this.controls.editNextPrev.connect(function(i) {
+		_g.edit(_g.controls.trackIndex,i);
+	});
+	var f = function(val) {
+		_g.waveform.updateOverlay(_g.controls.cellOffset.getValue(true),_g.controls.cellDuration.getValue(true));
+	};
+	this.controls.cellOffset.addObserver(f);
+	this.controls.cellDuration.addObserver(f);
+};
+drums_view_edit_CellEditPanel.__name__ = true;
+drums_view_edit_CellEditPanel.__super__ = PIXI.Container;
+drums_view_edit_CellEditPanel.prototype = $extend(PIXI.Container.prototype,{
+	edit: function(trackIndex,tickIndex) {
+		if(tickIndex > 15) tickIndex = 0; else if(tickIndex < 0) tickIndex = 15;
+		if(trackIndex > 7) trackIndex = 0; else if(trackIndex < 0) trackIndex = 7;
+		var sameTrack = this.trackIndex == trackIndex;
+		this.trackIndex = trackIndex;
+		this.tickIndex = tickIndex;
+		if(!this.visible) {
+			this.visible = this.launching = true;
+			this.fadeUI = this.closing = false;
+			this.bgSize = 0;
+			this.uiContainer.alpha = 0;
+		} else if(!sameTrack) {
+			this.visible = true;
+			this.launching = this.closing = false;
+			this.fadeUI = true;
+			this.bgSize = 1;
+			this.uiContainer.alpha = 0;
+		}
+		this.event = this.drums.tracks[trackIndex].events[tickIndex];
+		this.waveform.setup(this.drums,trackIndex,tickIndex);
+		this.waveform.updateOverlay(this.controls.cellOffset.getValue(true),this.controls.cellDuration.getValue(true));
+		this.cellInfo.update(this.drums,trackIndex,tickIndex);
+		this.controls.update(trackIndex,tickIndex);
+		window.removeEventListener("keydown",$bind(this,this.onKeyDown));
+		window.addEventListener("keydown",$bind(this,this.onKeyDown));
+	}
+	,onKeyDown: function(e) {
+		var _g = e.keyCode;
+		switch(_g) {
+		case 80:
+			this.drums.playTrackCellNow(this.trackIndex,this.tickIndex);
+			break;
+		case 37:
+			this.edit(this.trackIndex,this.tickIndex - 1);
+			break;
+		case 39:
+			this.edit(this.trackIndex,this.tickIndex + 1);
+			break;
+		case 38:
+			this.edit(this.trackIndex - 1,this.tickIndex);
+			break;
+		case 40:
+			this.edit(this.trackIndex + 1,this.tickIndex);
+			break;
+		}
+	}
+	,close: function() {
+		window.removeEventListener("keydown",$bind(this,this.onKeyDown));
+		this.bg.pivot.set(0,0);
+		this.bg.position.set(0,0);
+		this.bg.scale.set(1,1);
+		this.closing = true;
+		this.launching = false;
+		this.uiContainer.alpha = 0;
+		this.trackIndex = -1;
+		this.tickIndex = -1;
+		this.closed.emit();
+	}
+	,tick: function(index) {
+		if(index == this.tickIndex && this.event.active) this.ticked = 1.0;
+	}
+	,update: function() {
+		if(!this.visible) return;
+		if(this.launching || this.closing) {
+			this.bgSize += this.launching?.08:-.07;
+			if(this.bgSize >= 1) this.onLaunched(); else if(this.bgSize <= 0) this.onClosed();
+			this.drawBg(this.bgSize);
+		} else {
+			if(this.ticked > 0) {
+				this.ticked *= .925;
+				if(this.ticked < .05) {
+					this.ticked = 0;
+					this.drawBg(1);
+				} else {
+					var g = 150 + (this.ticked * 96 | 0);
+					this.drawBg(1,2162688 | g << 8 | 243);
+				}
+			}
+			if(this.fadeUI && this.uiContainer.alpha < 1) {
+				this.uiContainer.alpha += .09;
+				this.controls.container.style.opacity = "" + this.uiContainer.alpha;
+				if(this.uiContainer.alpha >= 1) {
+					this.uiContainer.alpha = 1;
+					this.fadeUI = false;
+				}
+			}
+		}
+	}
+	,setupUI: function(pointer) {
+		this.uiContainer = new PIXI.Container();
+		var bg = new PIXI.Graphics();
+		bg.beginFill(819422);
+		bg.drawRect(-18.125,-18.,880,428);
+		bg.endFill();
+		this.waveform = new drums_view_edit_WaveformPanel();
+		this.cellInfo = new drums_view_edit_CellInfoPanel();
+		this.uiContainer.addChild(bg);
+		this.uiContainer.addChild(this.waveform);
+		this.uiContainer.addChild(this.cellInfo);
+		this.uiContainer.alpha = 0;
+		this.addChild(this.uiContainer);
+	}
+	,onLaunched: function() {
+		this.launching = false;
+		this.bgSize = 1;
+		this.fadeUI = true;
+	}
+	,onClosed: function() {
+		this.trackIndex = -1;
+		this.tickIndex = -1;
+		this.closing = this.visible = false;
+		this.bgSize = 0;
+	}
+	,drawBg: function(size,colour) {
+		if(colour == null) colour = 2201331;
+		this.bg.position.set(0,0);
+		this.bg.clear();
+		if(size == 1) {
+			this.bg.beginFill(colour);
+			this.bg.drawRect(-28.125,-28.,900,448);
+			this.bg.endFill();
+			return;
+		}
+		var size1 = size * size;
+		var startX = this.tickIndex * 56.25;
+		var startY = this.trackIndex * 56.;
+		var right;
+		var left;
+		var up;
+		var down;
+		right = (this.displayWidth - startX - 56.25 + 28.125) * size1;
+		down = (this.displayHeight - startY - 56. + 28.) * size1;
+		left = (-startX * size1 - 56.25 + 28.125) * size1;
+		up = (-startY * size1 - 56. + 28.) * size1;
+		this.bg.beginFill(colour,size1);
+		this.bg.drawRect(startX,startY,right,down);
+		this.bg.drawRect(startX,startY,left,up);
+		this.bg.drawRect(startX,startY,right,up);
+		this.bg.drawRect(startX,startY,left,down);
+		this.bg.endFill();
+	}
+	,playNow: function() {
+		this.drums.playTrackCellNow(this.trackIndex,this.tickIndex);
+	}
+	,__class__: drums_view_edit_CellEditPanel
+});
+var drums_view_edit_CellInfoPanel = function() {
+	drums_view_UIElement.call(this,170,43);
 	this.bg.alpha = .66;
 	this.trackName = new PIXI.Text("",{ font : "200 20px Roboto", fill : "white", align : "center"});
 	this.trackName.position.set(15,10);
 	this.addChild(this.trackName);
 };
-drums_ui_celledit_CellInfoPanel.__name__ = true;
-drums_ui_celledit_CellInfoPanel.__super__ = drums_ui_UIElement;
-drums_ui_celledit_CellInfoPanel.prototype = $extend(drums_ui_UIElement.prototype,{
+drums_view_edit_CellInfoPanel.__name__ = true;
+drums_view_edit_CellInfoPanel.__super__ = drums_view_UIElement;
+drums_view_edit_CellInfoPanel.prototype = $extend(drums_view_UIElement.prototype,{
 	update: function(sequencer,i,j) {
 		var jj = j + 1;
 		var track = sequencer.tracks[i];
 		this.trackName.text = track.name + " (" + (jj < 10?"0" + jj + "/16)":"" + jj + "/16)");
 		this.drawBg((this.trackName.width | 0) + 30,43);
 	}
-	,__class__: drums_ui_celledit_CellInfoPanel
+	,__class__: drums_view_edit_CellInfoPanel
 });
-var drums_ui_celledit_WaveformPanel = function() {
-	drums_ui_UIElement.call(this,840,198);
-	this.waveform = new drums_Waveform(840,198);
+var drums_view_edit_WaveformPanel = function() {
+	drums_view_UIElement.call(this,840,198);
+	this.waveform = new drums_view_displays_Waveform(840,198);
 	this.overlay = new PIXI.Graphics();
 	this.addChildAt(this.overlay,1);
 	this.addChildAt(this.waveform,2);
 	this.updateOverlay(0,1);
 };
-drums_ui_celledit_WaveformPanel.__name__ = true;
-drums_ui_celledit_WaveformPanel.__super__ = drums_ui_UIElement;
-drums_ui_celledit_WaveformPanel.prototype = $extend(drums_ui_UIElement.prototype,{
+drums_view_edit_WaveformPanel.__name__ = true;
+drums_view_edit_WaveformPanel.__super__ = drums_view_UIElement;
+drums_view_edit_WaveformPanel.prototype = $extend(drums_view_UIElement.prototype,{
 	setup: function(drums1,trackIndex,tickIndex) {
 		var buffer = drums1.tracks[trackIndex].source._buffer;
 		this.waveform.drawBuffer(buffer);
@@ -1436,15 +1244,254 @@ drums_ui_celledit_WaveformPanel.prototype = $extend(drums_ui_UIElement.prototype
 		this.overlay.drawRect(x,0,w,198);
 		this.overlay.endFill();
 	}
-	,play: function(e) {
-	}
 	,drawBg: function(w,h) {
-		drums_ui_UIElement.prototype.drawBg.call(this,w,h);
+		drums_view_UIElement.prototype.drawBg.call(this,w,h);
 		this.bg.lineStyle(1,6344447);
 		this.bg.moveTo(0,h / 2);
 		this.bg.lineTo(840,h / 2);
 	}
-	,__class__: drums_ui_celledit_WaveformPanel
+	,__class__: drums_view_edit_WaveformPanel
+});
+var drums_view_sequencer_BeatLines = function(displayWidth,displayHeight) {
+	PIXI.Container.call(this);
+	this.interactive = false;
+	this.interactiveChildren = false;
+	this.displayWidth = displayWidth;
+	this.displayHeight = displayHeight;
+	this.xStep = displayWidth / 16;
+	this.lines = [];
+	var g;
+	var _g = 0;
+	while(_g < 16) {
+		var i = _g++;
+		g = new PIXI.Graphics();
+		g.position.x = Math.round(this.xStep * i);
+		this.lines.push(this.addChild(g));
+	}
+	var _g1 = 0;
+	while(_g1 < 16) {
+		var i1 = _g1++;
+		this.tick(i1);
+	}
+	tones_utils_TimeUtil.get_frameTick().connect($bind(this,this.update));
+};
+drums_view_sequencer_BeatLines.__name__ = true;
+drums_view_sequencer_BeatLines.__super__ = PIXI.Container;
+drums_view_sequencer_BeatLines.prototype = $extend(PIXI.Container.prototype,{
+	tick: function(index) {
+		if(index < 0) return;
+		this.drawLine(this.lines[index],16);
+	}
+	,update: function(dt) {
+		var _g = 0;
+		while(_g < 16) {
+			var i = _g++;
+			var gfx = this.lines[i];
+			var currentWidth = gfx.width;
+			if(currentWidth > 1) {
+				var w = currentWidth - (currentWidth - 1) * .15;
+				this.drawLine(gfx,w);
+			}
+		}
+	}
+	,drawLine: function(g,w) {
+		g.clear();
+		g.beginFill(2201331,1);
+		g.drawRect(-w / 2,0,w,this.displayHeight);
+		g.endFill();
+	}
+	,__class__: drums_view_sequencer_BeatLines
+});
+var drums_view_sequencer_CellGrid = function(drums1) {
+	PIXI.Container.call(this);
+	this.drums = drums1;
+	this.displayHeight = 448;
+	this.cells = [];
+	this.pointer = new drums_view_Pointer();
+	this.cellEditPanel = new drums_view_edit_CellEditPanel(drums1,this.pointer,900,448);
+	this.cellUI = new drums_view_sequencer_CellUI(this.pointer);
+	this.cellUI.editEvent.connect(($_=this.cellEditPanel,$bind($_,$_.edit)));
+	this.cellUI.toggleEvent.connect($bind(drums1,drums1.toggleEvent));
+	this.createCells();
+	this.cellEditPanel.closed.connect(($_=this.cellUI,$bind($_,$_.clear)));
+	this.addChild(this.cellEditPanel);
+};
+drums_view_sequencer_CellGrid.__name__ = true;
+drums_view_sequencer_CellGrid.__super__ = PIXI.Container;
+drums_view_sequencer_CellGrid.prototype = $extend(PIXI.Container.prototype,{
+	createCells: function() {
+		var g;
+		var background = new PIXI.Container();
+		var _g = 0;
+		while(_g < 8) {
+			var i = _g++;
+			var _g1 = 0;
+			while(_g1 < 16) {
+				var j = _g1++;
+				g = new PIXI.Graphics();
+				g.position.x = Math.round(j * 56.25);
+				g.position.y = Math.round(i * 56.);
+				this.drawCell(g,52,0);
+				background.addChild(g);
+			}
+		}
+		background.interactive = false;
+		background.interactiveChildren = false;
+		background.cacheAsBitmap = true;
+		this.addChild(background);
+		this.addChild(this.cellUI);
+		var _g2 = 0;
+		while(_g2 < 8) {
+			var i1 = _g2++;
+			this.cells.push([]);
+			var _g11 = 0;
+			while(_g11 < 16) {
+				var j1 = _g11++;
+				g = new PIXI.Graphics();
+				g.position.x = Math.round(j1 * 56.25);
+				g.position.y = Math.round(i1 * 56.);
+				g.interactive = true;
+				g.name = "" + i1 + "," + j1;
+				this.pointer.watch(g);
+				this.cells[i1].push(this.addChild(g));
+			}
+		}
+	}
+	,drawCell: function(g,size,color) {
+		g.clear();
+		g.beginFill(color,1);
+		g.drawRect(-(size / 2),-(size / 2),size,size);
+		g.endFill();
+	}
+	,tick: function(index) {
+		if(index < 0) return;
+		var cell;
+		var event;
+		var tracks = this.drums.tracks;
+		var _g = 0;
+		while(_g < 8) {
+			var i = _g++;
+			event = tracks[i].events[index];
+			if(event.active) {
+				cell = this.cells[i][index];
+				cell.lineColor = 16777215;
+				this.drawCell(cell,52,16777215);
+			}
+		}
+		this.cellEditPanel.tick(index);
+	}
+	,update: function(dt) {
+		var c;
+		var cell;
+		var active;
+		var tracks = this.drums.tracks;
+		var _g = 0;
+		while(_g < 8) {
+			var i = _g++;
+			var _g1 = 0;
+			while(_g1 < 16) {
+				var j = _g1++;
+				cell = this.cells[i][j];
+				active = tracks[i].events[j].active;
+				var w = cell.width;
+				if(active && w > 41.6) {
+					var p = (w / 41.6 - 1) * 4;
+					var intensity = 48 + (207 * p | 0);
+					var size = w - (w - 41.6) * .1;
+					if(p < .001) size = 41.6;
+					this.drawCell(cell,size,intensity | intensity << 8 | intensity << 16);
+				} else {
+					c = active?3158064:1184274;
+					if(cell.lineColor != c) {
+						cell.lineColor = c;
+						this.drawCell(cell,41.6,c);
+					}
+				}
+			}
+		}
+		this.cellUI.update();
+		this.cellEditPanel.update();
+	}
+	,__class__: drums_view_sequencer_CellGrid
+});
+var drums_view_sequencer_CellUI = function(pointer) {
+	this.isDown = false;
+	this.fading = false;
+	PIXI.Graphics.call(this);
+	this.toggleEvent = new hxsignal_impl_Signal2();
+	this.editEvent = new hxsignal_impl_Signal2();
+	pointer.click.connect($bind(this,this.onClick));
+	pointer.down.connect($bind(this,this.onDown));
+	pointer.up.connect($bind(this,this.onPressCancel));
+	pointer.longPress.connect($bind(this,this.onLongPress));
+	pointer.pressCancel.connect($bind(this,this.onPressCancel));
+	pointer.pressProgress.connect($bind(this,this.onPressProgress));
+};
+drums_view_sequencer_CellUI.__name__ = true;
+drums_view_sequencer_CellUI.__super__ = PIXI.Graphics;
+drums_view_sequencer_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
+	onClick: function(target) {
+		if(target.parent != this.parent) return;
+		var values = target.name.split(",");
+		var trackIndex = Std.parseInt(values[0]);
+		var tickIndex = Std.parseInt(values[1]);
+		this.toggleEvent.emit(trackIndex,tickIndex);
+	}
+	,onDown: function(target) {
+		if(target.parent != this.parent) return;
+		this.clear();
+		this.x = target.x;
+		this.y = target.y;
+		this.beginFill(2201331,0.25);
+		this.drawRect(-26.,-26.,52,52);
+		this.endFill();
+		this.alpha = 0;
+		this.isDown = true;
+		this.fading = false;
+	}
+	,onPressProgress: function(target,p) {
+		if(target.parent != this.parent) return;
+		this.x = target.x;
+		this.y = target.y;
+		this.clear();
+		this.alpha = 1;
+		var pp = p * p;
+		var ppp = pp * p;
+		this.beginFill(2201331,.25 + ppp * .25);
+		this.drawRect(-26.,-26.,52,52);
+		this.endFill();
+		this.beginFill(2201331,pp);
+		this.drawRect(-26.,-26.,pp * 52,52);
+		this.endFill();
+	}
+	,onLongPress: function(target) {
+		if(target.parent != this.parent) return;
+		this.isDown = false;
+		this.beginFill(2201331,1);
+		this.drawRect(-26.,-26.,52,52);
+		this.endFill();
+		var values = target.name.split(",");
+		var trackIndex = Std.parseInt(values[0]);
+		var tickIndex = Std.parseInt(values[1]);
+		this.editEvent.emit(trackIndex,tickIndex);
+	}
+	,onPressCancel: function(target) {
+		if(target != null && target.parent != this.parent) return;
+		this.fading = true;
+		this.isDown = false;
+	}
+	,update: function() {
+		if(this.fading) {
+			if(this.alpha > 0.001) this.alpha *= .75; else {
+				this.clear();
+				this.alpha = 1;
+				this.fading = false;
+			}
+		} else if(this.isDown) {
+			if(this.alpha < 1) this.alpha += .05;
+		}
+	}
+	,__class__: drums_view_sequencer_CellUI
 });
 var haxe_IMap = function() { };
 haxe_IMap.__name__ = true;
@@ -2311,16 +2358,6 @@ var tones_utils_AudioNodeRecorder = function(source,bufferSize,workerPath) {
 	this.node.connect(context.destination);
 };
 tones_utils_AudioNodeRecorder.__name__ = true;
-tones_utils_AudioNodeRecorder.forceDownload = function(blob,filename) {
-	if(filename == null) filename = "output.wav";
-	var doc = window.document;
-	var link = doc.createElement("a");
-	link.href = URL.createObjectURL(blob);
-	link.download = filename;
-	var click = doc.createEvent("Event");
-	click.initEvent("click",true,true);
-	link.dispatchEvent(click);
-};
 tones_utils_AudioNodeRecorder.prototype = {
 	onWorkerMessage: function(e) {
 		if(js_Boot.__instanceof(e.data,Blob)) this.wavEncoded.emit(e.data); else if((e.data instanceof Array) && e.data.__enum__ == null) this.bufferExported.emit(e.data); else throw new js__$Boot_HaxeError("Unexpected message data");
