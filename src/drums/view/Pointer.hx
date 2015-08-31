@@ -1,4 +1,4 @@
-package drums;
+package drums.view;
 import hxsignal.Signal;
 import js.html.Event;
 import pixi.core.display.DisplayObject;

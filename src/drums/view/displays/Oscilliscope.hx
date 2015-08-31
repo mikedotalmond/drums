@@ -1,4 +1,5 @@
-package drums;
+package drums.view.displays;
+
 import js.html.audio.AnalyserNode;
 import js.html.audio.AudioContext;
 import js.html.Uint8Array;

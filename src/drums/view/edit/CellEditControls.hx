@@ -1,4 +1,4 @@
-package drums.ui.celledit;
+package drums.view.edit;
 import hxsignal.Signal;
 import js.Browser;
 import js.html.Element;
@@ -48,6 +48,7 @@ class CellEditControls {
 		new JQuery('#cell-edit-play-button').on('click tap', function(_) {
 			play.emit();
 		});
+		
 		new JQuery('#cell-edit-close-button').on('click tap', function(_) {
 			close.emit();
 			tickIndex = -1;

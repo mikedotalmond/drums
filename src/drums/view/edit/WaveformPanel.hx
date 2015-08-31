@@ -1,6 +1,7 @@
-package drums.ui.celledit;
+package drums.view.edit;
 import drums.DrumSequencer;
-import drums.Waveform;
+import drums.view.displays.Waveform;
+import drums.view.UIElement;
 import js.html.audio.AudioBuffer;
 import pixi.core.graphics.Graphics;
 
@@ -34,8 +35,6 @@ class WaveformPanel extends UIElement {
 		var buffer = drums.tracks[trackIndex].source.buffer;
 		var e = drums.tracks[trackIndex].events[tickIndex];
 		
-		// var d = buffer.duration;
-		
 		waveform.drawBuffer(buffer);
 	}
 	
@@ -54,12 +53,6 @@ class WaveformPanel extends UIElement {
 		overlay.drawRect(x, 0, w, Height);
 		overlay.endFill();
 	}
-	
-	
-	public function play(e:TrackEvent) {
-		
-	}
-	
 	
 	override function drawBg(w, h) {
 		super.drawBg(w, h);

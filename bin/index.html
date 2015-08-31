@@ -74,23 +74,25 @@
 					<div class="mdl-tooltip" for="shuffle-button">Random</div>
 				</div>	
 				
+				<!-- record buttons -->
 				<div class="mdl-cell mdl-cell--1-col ">
 					<button id="record-button" style="float:left" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-js-ripple-effect">
 						<i class="material-icons ">album</i>
 					</button>
-					<div class="mdl-tooltip" for="record-button">Record - start</div>
-					<!-- TODO:
-					<button id="save-recording-button" style="float:left" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-js-ripple-effect">
-						<i class="material-icons ">file_download</i>
-					</button>
-					<div class="mdl-tooltip" for="save-recording-button">Record - save</div>
-				
-					<button id="clear-recording-button" style="float:left" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-js-ripple-effect">
+					<div class="mdl-tooltip" for="record-button"><span id="record-start-tooltip">Record</span><span id="record-stop-tooltip" style="display:none;">Stop Recording</span></div>
+					
+					<a id="save-button-link" href="#save">
+						<button id="save-recording-button" style="float:left;display:none;" class="mdl-button mdl-button--primary mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-js-ripple-effect">
+							<i class="material-icons ">file_download</i>
+						</button>
+					</a>
+					<div class="mdl-tooltip" for="save-recording-button">Save Recording</div>
+					
+					<button id="clear-recording-button" style="float:right;display:none;" class="mdl-button mdl-button--primary mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-js-ripple-effect">
 						<i class="material-icons ">clear</i>
 					</button>					
-					<div class="mdl-tooltip" for="clear-recording-button">Record - clear</div>
-					-->
-				</div>				
+					<div class="mdl-tooltip" for="clear-recording-button">Clear Recording</div>
+				</div>
 				
 				<div class="mdl-layout-spacer"></div>	
 				

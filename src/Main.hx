@@ -1,10 +1,11 @@
 package;
 
-import drums.ui.BeatLines;
+import drums.view.sequencer.BeatLines;
 import drums.DrumSequencer;
-import drums.Oscilliscope;
-import drums.ui.Controls;
-import drums.ui.SequenceGrid;
+import drums.view.displays.Oscilliscope;
+import drums.Controls;
+import drums.view.sequencer.CellGrid;
+import hxsignal.Signal.ConnectionTimes;
 import input.KeyCodes;
 import js.Browser;
 import js.html.*;
@@ -35,12 +36,12 @@ class Main extends Application {
 
 	var drums:DrumSequencer;
 	var oscilliscope:Oscilliscope;
-	var sequenceGrid:SequenceGrid;
+	var sequenceGrid:CellGrid;
 	var beatLines:BeatLines;
 	var ready:Bool;
 	
 	var randomise:Bool = false;
-	var controls:drums.ui.Controls;
+	var controls:drums.Controls;
 	
 	var recorder:AudioNodeRecorder;
 
@@ -48,23 +49,22 @@ class Main extends Application {
 		super();
 
 		ready = false;
-
-		controls = new Controls();
 		
 		initAudio();
 		initPixi();
 
-		//initOscilliscope();
 		initBeatLines();
 		initStepGrid();
 		
-		initControlRouting();
+		initControls();
 		
 		stageResized();
 	}
 	
 	
-	function initControlRouting() {
+	function initControls() {
+		
+		controls = new Controls();
 		
 		controls.bpm.addObserver(function(p) { drums.bpm = p.getValue(); } );
 		
@@ -86,22 +86,65 @@ class Main extends Application {
 		});
 		
 		controls.recordToggle.addObserver(function(p) {
+			var r = p.getValue();
 			
-			if (!recorder.recording && p.getValue()) {
-				if (!drums.playing) {
+			if (!recorder.recording && r) {
+				if (!drums.isPlaying) {
 					p.setValue(false);
 					return;
 				}
+				
 				trace('recording...');
 				recorder.clear();
 				recorder.start();
-			} else if(recorder.recording){
+				
+				Browser.document.getElementById('record-start-tooltip').style.display = 'none';
+				Browser.document.getElementById('record-stop-tooltip').style.display = 'block';
+			
+			} else if(recorder.recording && !r){
+				
+				Browser.document.getElementById('record-start-tooltip').style.display = 'block';
+				Browser.document.getElementById('record-stop-tooltip').style.display = 'none';
+				
+				var resetRecordButtons = function() {
+					Browser.document.getElementById('save-recording-button').style.display = 'none';
+					Browser.document.getElementById('clear-recording-button').style.display = 'none';
+					Browser.document.getElementById('record-button').style.display = 'block';	
+				};
+				
+				recorder.wavEncoded.connect(function (data:Blob) {
+					trace('Encoded wav - ${(data.size>>10) / 1024} MB  (${data.size} bytes)');
+					
+					Browser.document.getElementById('save-recording-button').style.display = 'block';
+					Browser.document.getElementById('clear-recording-button').style.display = 'block';
+					
+					// link anchor wraps the mdl button, so will be triggered when user clicks to save recording
+					var link:AnchorElement = cast Browser.document.getElementById('save-button-link');
+					link.href = URL.createObjectURL(data);
+					link.download = 'drums_${drums.bpm}bpm.wav';
+					
+					controls.saveRecording.connect(function() {
+						resetRecordButtons();
+					}, ConnectionTimes.Once);
+					
+					controls.clearRecording.connect(function() {
+						recorder.clear();
+						resetRecordButtons();
+					}, ConnectionTimes.Once);
+					
+				}, ConnectionTimes.Once);
+				
 				trace('stopped recording');
 				recorder.stop();
-				trace('encoding wav');
+				
+				trace('encoding wav...');
 				recorder.encodeWAV();
+				
+				Browser.document.getElementById('record-button').style.display = 'none';
 			}
 		});
+		
+	
 		
 		controls.swing.addObserver(function(p) {
 			drums.swing = p.getValue();
@@ -142,9 +185,15 @@ class Main extends Application {
 			}
 			
 			tracks[i].solo(state);
-			for (track in tracks) track.updateOutputState();
-			
+			for (track in tracks) track.updateOutputState();			
 		});
+		
+		
+		drums.playing.connect(function(value) {
+			if (!value && recorder.recording) controls.recordToggle.setValue(false);
+		});
+		
+		controls.randomModeToggle.setValue(true);
 	}
 	
 
@@ -161,13 +210,6 @@ class Main extends Application {
 		drums.ready.connect(onDrumsReady);
 		
 		recorder = new AudioNodeRecorder(drums.output);
-		recorder.wavEncoded.connect(onOutputBufferEncoded);
-	}
-	
-	
-	function onOutputBufferEncoded(data:Blob) {
-		trace('Encoded wav - ${(data.size>>10) / 1024} MB  (${data.size} bytes)');
-		AudioNodeRecorder.forceDownload(data);
 	}
 
 
@@ -237,7 +279,7 @@ class Main extends Application {
 
 
 	function initStepGrid() {
-		sequenceGrid = new SequenceGrid(drums);
+		sequenceGrid = new CellGrid(drums);
 		stage.addChild(sequenceGrid);
 	}
 

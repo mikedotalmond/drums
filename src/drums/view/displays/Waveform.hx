@@ -1,4 +1,4 @@
-package drums;
+package drums.view.displays;
 import js.html.audio.AudioBuffer;
 import js.html.Float32Array;
 import pixi.core.graphics.Graphics;

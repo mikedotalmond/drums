@@ -1,4 +1,4 @@
-package drums.ui.celledit;
+package drums.view.edit;
 import pixi.core.text.Text;
 
 /**

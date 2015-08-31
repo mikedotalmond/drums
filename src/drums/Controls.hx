@@ -1,4 +1,4 @@
-package drums.ui;
+package drums;
 
 import hxsignal.Signal;
 import input.KeyCodes;
@@ -28,6 +28,9 @@ class Controls {
 	public var trackMute	(default, null):Signal<Int->Bool->Void>;
 	public var trackSolo	(default, null):Signal<Int->Bool->Void>;
 	public var trackShuffle	(default, null):Signal<Int->Void>;
+	
+	public var saveRecording(default, null):Signal<Void->Void>;
+	public var clearRecording(default, null):Signal<Void->Void>;
 	
 	public var muteTracks	(default, null):Int8Array;
 	public var soloTracks	(default, null):Int8Array;
@@ -108,6 +111,12 @@ class Controls {
 			else recordButton.classList.remove('mdl-button--accent');
 		});
 		new JQuery(recordButton).on('click tap',  function(_) { recordToggle.setValue(!recordToggle.getValue()); });
+		
+		
+		saveRecording = new Signal<Void->Void>();
+		new JQuery(byId('save-recording-button')).on('click tap',  function(_) { saveRecording.emit(); } );
+		clearRecording = new Signal<Void->Void>();
+		new JQuery(byId('clear-recording-button')).on('click tap',  function(_) { clearRecording.emit(); } );
 		
 		
 		//

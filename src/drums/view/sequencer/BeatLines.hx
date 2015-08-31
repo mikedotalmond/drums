@@ -1,4 +1,4 @@
-package drums.ui;
+package drums.view.sequencer;
 import pixi.core.display.Container;
 import pixi.core.graphics.Graphics;
 import tones.utils.TimeUtil;

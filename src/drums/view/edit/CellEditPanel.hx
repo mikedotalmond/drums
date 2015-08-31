@@ -1,9 +1,10 @@
-package drums.ui;
+package drums.view.edit;
 import drums.DrumSequencer;
-import drums.DrumSequencer.TrackEvent;
-import drums.ui.celledit.CellEditControls;
-import drums.ui.celledit.CellInfoPanel;
-import drums.ui.celledit.WaveformPanel;
+import drums.TrackEvent;
+import drums.view.edit.CellEditControls;
+import drums.view.edit.CellInfoPanel;
+import drums.view.edit.WaveformPanel;
+import drums.view.sequencer.CellGrid;
 import hxsignal.Signal;
 import input.KeyCodes;
 import js.Browser;
@@ -50,7 +51,6 @@ class CellEditPanel extends Container {
 		this.displayHeight = displayHeight;
 
 		bg = new Graphics();
-		bg.interactive = true;
 		addChild(bg);
 
 		setupUI(pointer);
@@ -140,17 +140,17 @@ class CellEditPanel extends Container {
 		closed.emit();
 	}
 
-
+	var ticked:Float = 0.0;
 	public function tick(index:Int) {
 		if (index == tickIndex && event.active) {
-			waveform.play(event);
+			ticked = 1.0;
 		}
 	}
-
+	
 
 	public function update() {
 		if (!visible) return;
-
+		
 		if (launching || closing) {
 
 			bgSize += (launching ? .08 : - .07);
@@ -161,7 +161,18 @@ class CellEditPanel extends Container {
 			drawBg(bgSize);
 
 		} else {
-
+			
+			if (ticked > 0) {
+				ticked *= .925;
+				if (ticked < .05) {
+					ticked = 0;
+					drawBg(1);
+				} else {
+					var g = 0x96 + Std.int(ticked * (0xf6 - 0x96));
+					drawBg(1, (0x210000 | (g<<8) | 0xf3));
+				}
+			}
+			
 			if (fadeUI && uiContainer.alpha < 1) {
 				uiContainer.alpha += .09;
 				controls.container.style.opacity = '${uiContainer.alpha}';
@@ -181,8 +192,8 @@ class CellEditPanel extends Container {
 		var bg = new Graphics();
 
 		var inset = 10;
-		var x = -SequenceGrid.xStep / 2 + inset;
-		var y = -SequenceGrid.yStep / 2 + inset;
+		var x = -CellGrid.xStep / 2 + inset;
+		var y = -CellGrid.yStep / 2 + inset;
 		var w = Main.displayWidth - (inset + inset);
 		var h = Main.displayHeight - (inset + inset);
 
@@ -208,6 +219,7 @@ class CellEditPanel extends Container {
 		fadeUI = true;
 	}
 
+	
 	function onClosed() {
 		trackIndex = -1;
 		tickIndex = -1;
@@ -216,7 +228,7 @@ class CellEditPanel extends Container {
 	}
 
 
-	function drawBg(size:Float) {
+	function drawBg(size:Float, colour:Int=0x2196f3) {
 
 		bg.position.set(0, 0);
 		bg.clear();
@@ -224,8 +236,8 @@ class CellEditPanel extends Container {
 		if (size == 1) {
 			// pixi mouse events don't work on graphics drawn at negative values..?
 			// so for final draw, start at 0,0 and fill the whole display
-			bg.beginFill(0x2196f3);
-			bg.drawRect(-SequenceGrid.xStep/2, -SequenceGrid.yStep/2, Main.displayWidth, Main.displayHeight);
+			bg.beginFill(colour);
+			bg.drawRect(-CellGrid.xStep/2, -CellGrid.yStep/2, Main.displayWidth, Main.displayHeight);
 			bg.endFill();
 			return;
 		}
@@ -233,17 +245,17 @@ class CellEditPanel extends Container {
 
 		var size = size * size;
 
-		var startX = (tickIndex * SequenceGrid.xStep);
-		var startY = (trackIndex * SequenceGrid.yStep);
+		var startX = (tickIndex * CellGrid.xStep);
+		var startY = (trackIndex * CellGrid.yStep);
 
 		var right, left, up, down;
 
-		right = ((displayWidth - startX) - SequenceGrid.xStep + SequenceGrid.xStep / 2) * size;
-		down = ((displayHeight - startY) - SequenceGrid.yStep + SequenceGrid.yStep / 2) * size;
-		left = ((-startX * size) - SequenceGrid.xStep + SequenceGrid.xStep / 2) * size;
-		up = ((-startY * size) - SequenceGrid.yStep + SequenceGrid.yStep / 2) * size;
+		right = ((displayWidth - startX) - CellGrid.xStep + CellGrid.xStep / 2) * size;
+		down = ((displayHeight - startY) - CellGrid.yStep + CellGrid.yStep / 2) * size;
+		left = ((-startX * size) - CellGrid.xStep + CellGrid.xStep / 2) * size;
+		up = ((-startY * size) - CellGrid.yStep + CellGrid.yStep / 2) * size;
 
-		bg.beginFill(0x2196f3, size);
+		bg.beginFill(colour, size);
 
 		// down / right
 		bg.drawRect(startX, startY, right, down);
