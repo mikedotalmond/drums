@@ -193,7 +193,7 @@ class Main extends Application {
 			if (!value && recorder.recording) controls.recordToggle.setValue(false);
 		});
 		
-		controls.randomModeToggle.setValue(true);
+		//controls.randomModeToggle.setValue(true);
 	}
 	
 

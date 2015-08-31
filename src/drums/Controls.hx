@@ -3,6 +3,7 @@ package drums;
 import hxsignal.Signal;
 import input.KeyCodes;
 import js.Browser;
+import js.Cookie;
 import js.html.InputElement;
 import js.html.Int8Array;
 import js.html.KeyboardEvent;
@@ -83,6 +84,17 @@ class Controls {
 	
 	function setupControlBar() {
 		var byId = Browser.document.getElementById;
+		
+		if (!Cookie.exists('viewedHelp') || Cookie.get('viewedHelp') != 'true') {
+			new JQuery('#info-modal').css('display', 'block');
+		}
+		new JQuery('#help-button').on('click tap',  function(_) { 
+			new JQuery('#info-modal').css('display', 'block');
+		});
+		new JQuery('#close-help').on('click tap',  function(_) { 
+			new JQuery('#info-modal').css('display', 'none');
+			Cookie.set('viewedHelp', 'true', 60 * 60 * 24 * 30, '/');
+		});
 		
 		//
 		playToggle = new Parameter<Bool,InterpolationNone>('playToggle', true, false);
