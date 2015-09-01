@@ -25,36 +25,79 @@
 	<!-- Always shows a header, even in smaller screens. -->
 	<div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
 	  <header class="mdl-layout__header">
-		<div class="mdl-layout__header-row">
-			<!-- Title -->
+		<div class="mdl-layout__header-row" style="padding-left:40px;">
+			
 			<span class="mdl-layout-title">drums</span>
-			<div class="mdl-layout-spacer"></div>	
 			
 			<div class="mdl-layout-spacer"></div>	
-		
-			<!-- Navigation. We hide it in small screens. -->
-			<nav class="mdl-navigation mdl-layout--large-screen-only">
-				<a class="mdl-navigation__link" href="https://github.com/mikedotalmond/drums">Source</a>
-			</nav>
 			
+			<button id="help-button" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--primary">
+				<i class="material-icons ">help_outline</i>
+			</button>
+			<div class="mdl-tooltip" for="help-button">What?</div>			
 		</div>
 	  </header>
 		
-	  <div class="mdl-layout__drawer">
-		<span class="mdl-layout-title">drums</span>
-		<div>
-			<p>drums?</p>
-		</div>
-		  <nav class="mdl-navigation">
-			<button class="iconbutton mdl-button mdl-js-button mdl-button--primary  mdl-js-ripple-effect">
-				<i class="material-icons ">play_circle_outline</i> 
-			</button>
-		  <a class="mdl-navigation__link" href="https://github.com/mikedotalmond/drums">Source code</a>
-		</nav>
-	  </div>
-		
 	  <main class="mdl-layout__content">
-		<div class="page-content" >
+		
+		<div id="info-modal" style="display:none;">
+
+			<div class="demo-card-wide mdl-card mdl-shadow--2dp">
+				<div class="mdl-card__title">
+					<h2 class="mdl-card__title-text">Drums</h2>
+				</div>
+				<div class="mdl-card__supporting-text">
+				
+					<h5>A 16-step, 8-track drum sequencer with per-step sample controls.</h5>
+					
+					<h6>Tap grid-cells to (de)activate them, long-press to launch the cell editor. Spacebar toggles playback.</h6>
+				
+					<p>
+						<i class="material-icons mdl-button--accent">shuffle</i> 
+						<span class="icon-text">Randomise mode continuously changes settings during playback.</span>
+					</p>
+					<p>
+						<i class="material-icons mdl-button--accent">album</i> 
+						<i class="material-icons mdl-button--primary">file_download</i> 
+						<span class="icon-text">Recorded the output and save to file (.wav)</span>
+					</p>
+					<p>
+						<i class="material-icons mdl-button--primary">shuffle</i> 
+						<i class="material-icons mdl-button--accent">not_interested</i> 
+						<i class="material-icons mdl-button--accent">radio_button_checked</i> 
+						<span class="icon-text">Randomise, Mute, or Solo individual tracks.</span>
+					</p>
+					<br/>
+					<code>
+						Made by <a href="https://twitter.com/mikedotalmond/">Mike</a>. 
+						Built with <a href="http://haxe.org/">Haxe</a> 
+						+ <a href="http://www.pixijs.com/">PixiJS</a>, 
+						and a bit of <a href="http://www.getmdl.io/">MDL</a>.
+					</code>
+					<br/>
+					<br/>
+			  </div>
+				
+			  <div class="mdl-card__actions mdl-card--border">
+				<a href="https://github.com/mikedotalmond/drums" target="_blank" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effectt">
+					 Source code
+				</a>
+				<a id="close-help" href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effectt" style="float:right;">
+					OK, Let's play!
+				</a>
+			  </div>
+			  
+			  <div class="mdl-card__menu">
+				<button class="mdl-button mdl-button--icon" style="pointer-events:none;">
+				  <i class="material-icons">help</i>
+				</button>
+			  </div>
+				
+			</div>
+			
+		</div>
+		
+		<div class="page-content" >			
 			<div class="mdl-grid controls-grid">
 				
 				<div class="mdl-cell mdl-cell--1-col ">

@@ -13,6 +13,15 @@ HxOverrides.cca = function(s,index) {
 	if(x != x) return undefined;
 	return x;
 };
+HxOverrides.substr = function(s,pos,len) {
+	if(pos != null && pos != 0 && len != null && len < 0) return "";
+	if(len == null) len = s.length;
+	if(pos < 0) {
+		pos = s.length + pos;
+		if(pos < 0) pos = 0;
+	} else if(len < 0) len = s.length + len - pos;
+	return s.substr(pos,len);
+};
 HxOverrides.iter = function(a) {
 	return { cur : 0, arr : a, hasNext : function() {
 		return this.cur < this.arr.length;
@@ -255,7 +264,6 @@ Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
 		this.drums.playing.connect(function(value) {
 			if(!value && _g.recorder.recording) _g.controls.recordToggle.setValue(false);
 		});
-		this.controls.randomModeToggle.setValue(true);
 	}
 	,initAudio: function() {
 		this.audioContext = tones_AudioBase.createContext();
@@ -351,6 +359,18 @@ Std.parseInt = function(x) {
 	if(isNaN(v)) return null;
 	return v;
 };
+var StringTools = function() { };
+StringTools.__name__ = true;
+StringTools.isSpace = function(s,pos) {
+	var c = HxOverrides.cca(s,pos);
+	return c > 8 && c < 14 || c == 32;
+};
+StringTools.ltrim = function(s) {
+	var l = s.length;
+	var r = 0;
+	while(r < l && StringTools.isSpace(s,r)) r++;
+	if(r > 0) return HxOverrides.substr(s,r,l - r); else return s;
+};
 var drums_Controls = function() {
 	this.setupControlBar();
 	this.setupTracks();
@@ -391,16 +411,24 @@ drums_Controls.prototype = {
 	,setupControlBar: function() {
 		var _g = this;
 		var byId = ($_=window.document,$bind($_,$_.getElementById));
+		if(!js_Cookie.exists("viewedHelp") || js_Cookie.get("viewedHelp") != "true") js.JQuery("#info-modal").css("display","block");
+		js.JQuery("#help-button").on("click tap",function(_) {
+			js.JQuery("#info-modal").css("display","block");
+		});
+		js.JQuery("#close-help").on("click tap",function(_1) {
+			js.JQuery("#info-modal").css("display","none");
+			js_Cookie.set("viewedHelp","true",2592000,"/");
+		});
 		this.playToggle = new parameter_ParameterBase("playToggle",parameter__$Parameter_Parameter_$Impl_$.getBool(true,false));
 		this.playToggle.addObserver(function(p) {
 			var state = p.getValue();
 			byId("play-button").style.display = state?"none":"";
 			byId("stop-button").style.display = state?"":"none";
 		});
-		js.JQuery("#play-button").on("click tap",function(_) {
+		js.JQuery("#play-button").on("click tap",function(_2) {
 			_g.playToggle.setValue(true);
 		});
-		js.JQuery("#stop-button").on("click tap",function(_1) {
+		js.JQuery("#stop-button").on("click tap",function(_3) {
 			_g.playToggle.setValue(false);
 		});
 		var randomButton = byId("shuffle-button");
@@ -408,7 +436,7 @@ drums_Controls.prototype = {
 		this.randomModeToggle.addObserver(function(p1) {
 			if(p1.getValue()) randomButton.classList.add("mdl-button--accent"); else randomButton.classList.remove("mdl-button--accent");
 		});
-		js.JQuery(randomButton).on("click tap",function(_2) {
+		js.JQuery(randomButton).on("click tap",function(_4) {
 			_g.randomModeToggle.setValue(!_g.randomModeToggle.getValue());
 		});
 		var recordButton = byId("record-button");
@@ -416,15 +444,15 @@ drums_Controls.prototype = {
 		this.recordToggle.addObserver(function(p2) {
 			if(p2.getValue()) recordButton.classList.add("mdl-button--accent"); else recordButton.classList.remove("mdl-button--accent");
 		});
-		js.JQuery(recordButton).on("click tap",function(_3) {
+		js.JQuery(recordButton).on("click tap",function(_5) {
 			_g.recordToggle.setValue(!_g.recordToggle.getValue());
 		});
 		this.saveRecording = new hxsignal_impl_Signal0();
-		js.JQuery(byId("save-recording-button")).on("click tap",function(_4) {
+		js.JQuery(byId("save-recording-button")).on("click tap",function(_6) {
 			_g.saveRecording.emit();
 		});
 		this.clearRecording = new hxsignal_impl_Signal0();
-		js.JQuery(byId("clear-recording-button")).on("click tap",function(_5) {
+		js.JQuery(byId("clear-recording-button")).on("click tap",function(_7) {
 			_g.clearRecording.emit();
 		});
 		var bpmSlider = byId("bpm-slider");
@@ -440,7 +468,7 @@ drums_Controls.prototype = {
 			bpmSlider.MaterialSlider.change(val);
 			js.JQuery(bpmSlider).parent().siblings("div[for=\"bpm-slider\"]").text("" + val);
 		});
-		js.JQuery("#bpm-slider").on("input change",function(_6) {
+		js.JQuery("#bpm-slider").on("input change",function(_8) {
 			_g.bpm.setValue(bpmSlider.valueAsNumber | 0);
 		});
 		this.bpm.setDefault(bpmSlider.valueAsNumber | 0);
@@ -457,7 +485,7 @@ drums_Controls.prototype = {
 			swingSlider.MaterialSlider.change(val1);
 			js.JQuery(swingSlider).parent().siblings("div[for=\"swing-slider\"]").text("" + (val1 * 100 | 0) + "%");
 		});
-		js.JQuery("#swing-slider").on("input change",function(_7) {
+		js.JQuery("#swing-slider").on("input change",function(_9) {
 			_g.swing.setValue(swingSlider.valueAsNumber);
 		});
 		this.swing.setDefault(swingSlider.valueAsNumber);
@@ -474,7 +502,7 @@ drums_Controls.prototype = {
 			volumeSlider.MaterialSlider.change(normValue);
 			js.JQuery(volumeSlider).parent().siblings("div[for=\"volume-slider\"]").text("" + normValue);
 		});
-		js.JQuery("#volume-slider").on("input change",function(_8) {
+		js.JQuery("#volume-slider").on("input change",function(_10) {
 			_g.volume.setValue(volumeSlider.valueAsNumber,true);
 		});
 		this.volume.setDefault(volumeSlider.valueAsNumber,true);
@@ -485,10 +513,10 @@ drums_Controls.prototype = {
 			byId("mute-button").style.display = state1?"none":"";
 			byId("unmute-button").style.display = state1?"":"none";
 		});
-		js.JQuery("#mute-button").on("click tap",function(_9) {
+		js.JQuery("#mute-button").on("click tap",function(_11) {
 			_g.muteToggle.setValue(true);
 		});
-		js.JQuery("#unmute-button").on("click tap",function(_10) {
+		js.JQuery("#unmute-button").on("click tap",function(_12) {
 			_g.muteToggle.setValue(false);
 		});
 	}
@@ -1641,6 +1669,25 @@ haxe_ds_ObjectMap.prototype = {
 	}
 	,__class__: haxe_ds_ObjectMap
 };
+var haxe_ds_StringMap = function() {
+	this.h = { };
+};
+haxe_ds_StringMap.__name__ = true;
+haxe_ds_StringMap.__interfaces__ = [haxe_IMap];
+haxe_ds_StringMap.prototype = {
+	setReserved: function(key,value) {
+		if(this.rh == null) this.rh = { };
+		this.rh["$" + key] = value;
+	}
+	,getReserved: function(key) {
+		return this.rh == null?null:this.rh["$" + key];
+	}
+	,existsReserved: function(key) {
+		if(this.rh == null) return false;
+		return this.rh.hasOwnProperty("$" + key);
+	}
+	,__class__: haxe_ds_StringMap
+};
 var hxsignal_ConnectionTimes = { __ename__ : true, __constructs__ : ["Once","Times","Forever"] };
 hxsignal_ConnectionTimes.Once = ["Once",0];
 hxsignal_ConnectionTimes.Once.toString = $estr;
@@ -2016,6 +2063,58 @@ js_Boot.__isNativeObj = function(o) {
 };
 js_Boot.__resolveNativeClass = function(name) {
 	return (Function("return typeof " + name + " != \"undefined\" ? " + name + " : null"))();
+};
+var js_Cookie = function() { };
+js_Cookie.__name__ = true;
+js_Cookie.set = function(name,value,expireDelay,path,domain) {
+	var s = name + "=" + encodeURIComponent(value);
+	if(expireDelay != null) {
+		var d2 = (function($this) {
+			var $r;
+			var d = new Date();
+			$r = (function($this) {
+				var $r;
+				var t = d.getTime() + expireDelay * 1000;
+				var d1 = new Date();
+				d1.setTime(t);
+				$r = d1;
+				return $r;
+			}($this));
+			return $r;
+		}(this));
+		s += ";expires=" + d2.toGMTString();
+	}
+	if(path != null) s += ";path=" + path;
+	if(domain != null) s += ";domain=" + domain;
+	window.document.cookie = s;
+};
+js_Cookie.all = function() {
+	var h = new haxe_ds_StringMap();
+	var a = window.document.cookie.split(";");
+	var _g = 0;
+	while(_g < a.length) {
+		var e = a[_g];
+		++_g;
+		e = StringTools.ltrim(e);
+		var t = e.split("=");
+		if(t.length < 2) continue;
+		var key = t[0];
+		var value = decodeURIComponent(t[1].split("+").join(" "));
+		if(__map_reserved[key] != null) h.setReserved(key,value); else h.h[key] = value;
+	}
+	return h;
+};
+js_Cookie.get = function(name) {
+	var tmp;
+	var _this = js_Cookie.all();
+	if(__map_reserved[name] != null) tmp = _this.getReserved(name); else tmp = _this.h[name];
+	return tmp;
+};
+js_Cookie.exists = function(name) {
+	var tmp;
+	var _this = js_Cookie.all();
+	if(__map_reserved[name] != null) tmp = _this.existsReserved(name); else tmp = _this.h.hasOwnProperty(name);
+	return tmp;
 };
 var parameter_Interpolation = function() { };
 parameter_Interpolation.__name__ = true;
@@ -2401,6 +2500,8 @@ function $bind(o,m) { if( m == null ) return null; if( m.__id__ == null ) m.__id
 String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;
+Date.prototype.__class__ = Date;
+Date.__name__ = ["Date"];
 var Int = { __name__ : ["Int"]};
 var Dynamic = { __name__ : ["Dynamic"]};
 var Float = Number;
@@ -2409,6 +2510,7 @@ var Bool = Boolean;
 Bool.__ename__ = ["Bool"];
 var Class = { __name__ : ["Class"]};
 var Enum = { };
+var __map_reserved = {}
 var q = window.jQuery;
 var js = js || {}
 js.JQuery = q;
