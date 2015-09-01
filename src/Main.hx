@@ -5,6 +5,7 @@ import drums.DrumSequencer;
 import drums.view.displays.Oscilliscope;
 import drums.Controls;
 import drums.view.sequencer.CellGrid;
+import haxe.Timer;
 import hxsignal.Signal.ConnectionTimes;
 import input.KeyCodes;
 import js.Browser;
@@ -50,15 +51,25 @@ class Main extends Application {
 
 		ready = false;
 		
-		initAudio();
-		initPixi();
-
-		initBeatLines();
-		initStepGrid();
-		
-		initControls();
-		
-		stageResized();
+		startup();
+	}
+	
+	function startup() {
+		if (Reflect.hasField(Browser.document.getElementById('bpm-slider'), 'MaterialSlider')) {
+			initAudio();
+			initPixi();
+			
+			initBeatLines();
+			initStepGrid();
+			
+			initControls();
+			
+			stageResized();
+		} else {
+			// wait for the Material js to initialise the interface elements
+			//trace('try again...');
+			Timer.delay(startup, 16);
+		}
 	}
 	
 	
