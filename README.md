@@ -1,5 +1,8 @@
-# drums
+# [drums](https://mikedotalmond.github.io/drums/)
 
-WIP - Making a little step-sequencer
+#### A 16-step, 8-track, drum sequencer with per-step sample controls.
 
-Current state: https://mikedotalmond.github.io/drums/
+Built with [Haxe](http://haxe.org) + [PixiJS](http://pixijs.com), and a bit of [MDL](http://getmdl.io). 
+
+Uses a [port](src/tones/utils/AudioNodeRecorder.hx) of [Recorderjs](https://github.com/mattdiamond/Recorderjs) to record the output and create WAV files.
+
