@@ -149,12 +149,7 @@ var Main = function() {
 	this.randomise = false;
 	pixi_plugins_app_Application.call(this);
 	this.ready = false;
-	this.initAudio();
-	this.initPixi();
-	this.initBeatLines();
-	this.initStepGrid();
-	this.initControls();
-	this.stageResized();
+	this.startup();
 };
 Main.__name__ = true;
 Main.main = function() {
@@ -165,7 +160,20 @@ Main.main = function() {
 };
 Main.__super__ = pixi_plugins_app_Application;
 Main.prototype = $extend(pixi_plugins_app_Application.prototype,{
-	initControls: function() {
+	startup: function() {
+		var tmp;
+		var o = window.document.getElementById("bpm-slider");
+		tmp = Object.prototype.hasOwnProperty.call(o,"MaterialSlider");
+		if(tmp) {
+			this.initAudio();
+			this.initPixi();
+			this.initBeatLines();
+			this.initStepGrid();
+			this.initControls();
+			this.stageResized();
+		} else haxe_Timer.delay($bind(this,this.startup),16);
+	}
+	,initControls: function() {
 		var _g = this;
 		this.controls = new drums_Controls();
 		this.controls.bpm.addObserver(function(p) {
@@ -1523,6 +1531,31 @@ drums_view_sequencer_CellUI.prototype = $extend(PIXI.Graphics.prototype,{
 });
 var haxe_IMap = function() { };
 haxe_IMap.__name__ = true;
+var haxe_Timer = function(time_ms) {
+	var me = this;
+	this.id = setInterval(function() {
+		me.run();
+	},time_ms);
+};
+haxe_Timer.__name__ = true;
+haxe_Timer.delay = function(f,time_ms) {
+	var t = new haxe_Timer(time_ms);
+	t.run = function() {
+		t.stop();
+		f();
+	};
+	return t;
+};
+haxe_Timer.prototype = {
+	stop: function() {
+		if(this.id == null) return;
+		clearInterval(this.id);
+		this.id = null;
+	}
+	,run: function() {
+	}
+	,__class__: haxe_Timer
+};
 var haxe_ds_BalancedTree = function() {
 };
 haxe_ds_BalancedTree.__name__ = true;
